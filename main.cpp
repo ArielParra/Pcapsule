@@ -3,19 +3,15 @@
 #include <string>
 #include <vector>
 
-// #include <cstdlib>
-// #include <cstring>
-
+#include <cstdlib>			 // exit()
 #include <pcap/pcap.h>		 // inet_ntoa
 #include <netinet/ip_icmp.h> // icmp_header
 #include <netinet/tcp.h>	 // tcp_header
 #include <netinet/udp.h>	 // udp_header
-// #include <netinet/ip.h>
-// #include <netinet/in.h>
 
-#define DEFAULT_PACKAGE_COUNT 10
+#define DEFAULT_PACKET_COUNT 10
 
-void header_looker(u_char *user, const struct pcap_pkthdr *pkthdr, const u_char *packetd_ptr)
+void headerLooker(u_char *user, const struct pcap_pkthdr *pkthdr, const u_char *packetd_ptr)
 {
 	int link_hdr_length = *(int *)user;
 	// packetd_ptr is pointing to the datalink header
@@ -97,109 +93,150 @@ void header_looker(u_char *user, const struct pcap_pkthdr *pkthdr, const u_char 
 	std::cout << " |\n";
 }
 
-void display_usage()
+void displayUsage()
 {
 	return std::cout
-			   << "Usage: ./nsniff -i <interface> [-n <num_packets>] [-f <filter_expression>] [-h]\n"
+			   << "Usage: ./pcapsule -i <interface> [-n <num_packets>] [-f <filter_expression>] [-h]\n"
 			   << "Options:\n"
 			   << "  -i <interface>       Specify the network interface to capture packets on.\n"
 			   << "  -n <num_packets>     Specify the number of packets to capture (default: 10).\n"
 			   << "  -f <filter>          Specify the BPF filter expression to use.\n"
-			   << "  -h                   Show this help message.\n",
+			   << "  -h                   Show this help message.",
 		   void();
 }
 
-bool handle_options(int argc, const char *argv[], std::string &device, int &packets_count, std::string &filter_expression)
+void handleOptions(int argc, const char *argv[], std::string &device_name, int &packets_count, std::string &filter_expression)
 {
 	// Convert argv to vector of strings for easier handling
-	std::vector<std::string> argList(argv, argv + argc);
+	std::vector<std::string> arguments(argv, argv + argc);
 
 	for (int i = 1; i < argc; ++i)
 	{
-		if (argList[i] == "-i")
+		if (arguments[i] == "-i")
 		{
 			if (i + 1 < argc)
 			{
-				device = argList[++i];
+				device_name = arguments[++i];
 			}
 			else
 			{
 				std::cerr << "ERROR: Missing argument for -i option.\n";
-				display_usage();
-				return false;
+				displayUsage();
+				exit(1);
 			}
 		}
-		else if (argList[i] == "-n")
+		else if (arguments[i] == "-n")
 		{
 			if (i + 1 < argc)
 			{
 				try
 				{
-					packets_count = std::stoi(argList[++i]);
+					packets_count = std::stoi(arguments[++i]);
 				}
 				catch (const std::out_of_range &e)
 				{
 					std::cerr << "ERROR: Input number is out of range";
-					return false;
+					exit(1);
 				}
 				catch (const std::invalid_argument &e)
 				{
 					std::cerr << "ERROR: Invalid input";
-					return false;
+					exit(1);
 				}
 				if (packets_count < 0)
 				{
 					std::cerr << "ERROR: Input number cannot be negative";
-					return false;
+					exit(1);
 				}
 			}
 			else
 			{
 				std::cerr << "ERROR: Missing argument for -n option.\n";
-				display_usage();
-				return false;
+				displayUsage();
+				exit(1);
 			}
 		}
-		else if (argList[i] == "-f")
+		else if (arguments[i] == "-f")
 		{
-			for (++i; i < argc && argList[i][0] != '-'; ++i)
+			for (++i; i < argc && arguments[i][0] != '-'; ++i)
 			{
 				if (!filter_expression.empty())
 					filter_expression += " ";
-				filter_expression += argList[i];
+				filter_expression += arguments[i];
 			}
 			--i; // Step back to avoid skipping next option
 		}
-		else if (argList[i] == "-h")
+		else if (arguments[i] == "-h")
 		{
-			display_usage();
-			return false;
+			displayUsage();
+			exit(1);
 		}
 		else
 		{
-			std::cerr << "ERROR: Unknown option " << argList[i] << "\n";
-			display_usage();
-			return false;
+			// std::cerr << "ERROR: Unknown option " << argList[i] << "\n";
+			displayUsage();
+			exit(1);
 		}
 	}
 
-	return true;
+	return;
+}
+
+void selectDeviceName(char *error_buffer, std::string &device_name)
+{
+
+	pcap_if_t *alldevsp;
+	if (pcap_findalldevs(&alldevsp, error_buffer))
+	{
+		std::cerr << "ERROR: pcap_findalldevs() -> " << error_buffer;
+		exit(1);
+	}
+	std::vector<std::string> devs;
+	std::cout << "\nAvailable Devices are :\n";
+	int count = 1;
+	for (pcap_if_t *dev = alldevsp; dev != nullptr; dev = dev->next)
+	{
+		std::cout << count << ". " << dev->name << " - " << (dev->description ? dev->description : "No description") << "\n";
+		if (dev->name != nullptr)
+		{
+			devs.push_back(dev->name);
+		}
+		++count;
+	}
+	pcap_freealldevs(alldevsp);
+	int device_number;
+
+	std::cout << "Enter the number of the device you want to sniff: ";
+	std::cin >> device_number;
+
+	// validation
+	if (device_number > 0 && device_number <= devs.size())
+	{
+		device_name = devs[device_number - 1];
+		std::cout << "You selected: " << device_name << "\n";
+	}
+	else
+	{
+		std::cerr << "Invalid selection. Please choose a number between 1 and " << devs.size() << ".\n";
+		exit(1);
+	}
 }
 
 int main(int argc, const char *argv[])
 {
-	std::string device = "";
+	std::string device_name = "";
 	std::string filter_expression = "";
-	int packets_count = DEFAULT_PACKAGE_COUNT; // Default packet count
-	if (!handle_options(argc, argv, device, packets_count, filter_expression))
-	{
-		return 1;
-	}
+	int packets_count = DEFAULT_PACKET_COUNT; // Default packet count
+
+	handleOptions(argc, argv, device_name, packets_count, filter_expression);
 
 	char error_buffer[PCAP_ERRBUF_SIZE];
 
+	if (device_name.empty())
+		selectDeviceName(error_buffer, device_name);
+
 	// Open the capture device: 	device, snap length,promiscuous mode, buffer timeout in ms,argument to callback
-	pcap_t *capdev = pcap_open_live(device.c_str(), BUFSIZ, 0, -1, error_buffer);
+	pcap_t *capdev = pcap_open_live(device_name.c_str(), BUFSIZ, 0, -1, error_buffer);
 
 	if (capdev == nullptr)
 	{
@@ -210,7 +247,7 @@ int main(int argc, const char *argv[])
 	// Apply filter if so
 	if (!filter_expression.empty())
 	{
-		std::cout << "Waiting for \"" << filter_expression << "\" packages...\n";
+		std::cout << "Waiting for \"" << filter_expression << "\" packets...\n";
 		struct bpf_program bpf;
 		bpf_u_int32 netmask;
 		if (pcap_compile(capdev, &bpf, filter_expression.c_str(), 0, netmask) == PCAP_ERROR)
@@ -245,7 +282,7 @@ int main(int argc, const char *argv[])
 		link_hdr_length = 0;
 	}
 
-	if (pcap_loop(capdev, packets_count, header_looker, (u_char *)&link_hdr_length)) // pcap_loop() passes packet data to the callback function
+	if (pcap_loop(capdev, packets_count, headerLooker, (u_char *)&link_hdr_length)) // pcap_loop() passes packet data to the callback function
 	{
 		std::cerr << "ERROR: pcap_loop() -> " << pcap_geterr(capdev);
 		return 1;

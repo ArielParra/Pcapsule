@@ -1,16 +1,6 @@
 # Proyecto_Redes-I
 Package sniffer made with libpcap in c++
 
-## Compilacion
-Aquí tienes las instrucciones corregidas y mejoradas:
-
----
-
-## Compilación
-Aquí tienes las instrucciones corregidas y estructuradas:
-
----
-
 ## Compilación
 
 Para compilar el programa, se requiere el compilador `gcc`/`g++` en una versión mayor o igual a C++11. Las instrucciones para compilar son las siguientes:
@@ -105,3 +95,4 @@ g++.exe main.cpp -lwpcap
 - talalio. (2023). *Building a packet sniffer*. Recuperado de <https://talalio.medium.com/building-a-packet-sniffer-9460f394041>
 - tcpdump.org. (s.f.). *Programming with pcap*. Recuperado de <https://www.tcpdump.org/pcap.html>
 - Vic Hargrave. (2022). *Develop a Packet Sniffer with Libpcap*. Recuperado de <https://vichargrave.github.io/programming/develop-a-packet-sniffer-with-libpcap/>
+
