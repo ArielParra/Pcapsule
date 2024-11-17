@@ -15,7 +15,7 @@ g++ main.cpp -lnpcap
 g++.exe main.cpp -lwpcap
 ```
 
-### Dependencia pcap
+### Dependencias
 
 #### Windows
 1. Descarga e instala `npcap` desde <https://npcap.com/#download>.
@@ -41,48 +41,34 @@ g++.exe main.cpp -lwpcap
     ```
 
 #### Nix/NixOS
-1. Si estás usando Nix o NixOS, el paquete `libpcap` ya está incluido en el archivo `default.nix`. Solo es necesario ejecutar:
+1. Si estás usando Nix o NixOS, las librerias ya están incluidos en el archivo `default.nix`. Solo es necesario ejecutar:
     ```bash
     nix-shell
     ```
-
----
-
-**Notas adicionales:**
-- Asegúrate de tener los permisos adecuados para instalar las dependencias en tu sistema.
-- Si tienes problemas con las rutas de las bibliotecas, asegúrate de que las rutas estén correctamente configuradas en tu entorno.
-
----
-
-**Notas adicionales:**
-- Asegúrate de tener los permisos adecuados para instalar dependencias en tu sistema.
-- Si tienes problemas con las rutas de las bibliotecas, asegúrate de que las rutas de instalación estén correctamente configuradas en tu entorno.
 
 ## Requisitos
 
 - [x] lenguaje de desarrollo c/c++
 - [x] uso de librería libpcap para (Linux/MacOS)
 - [x] interfaz basada en texto amigable con el usuario (requerida)
-- [] interfaz gráfica amigable con el usuario (opcional)
-- [] captura y análisis de paquetes,
-    - [] parada/inicio
+- [x] interfaz gráfica amigable con el usuario (opcional)
+- [ ] captura y análisis de paquetes,
+    - [x] parada/inicio
     - [x] filtros de captura,
-    - [] exportación de resultados
-    - [] áreas definidas para mostrar información en pantalla
-- [] la interfaz deberá contar con 3 áreas claramente definidas:
-    - [] 1. área en donde se muestre el tráfico capturado.
-    - [] 2. área en donde se muestre la información de manera estructurada del paquete capturado que se seleccione en el área de tráfico capturado.
-    - [] 3. área en donde se muestre el contenido “raw” del paquete capturado que se seleccione en el área de tráfico capturado.
-- [] 4 diferentes tipos de filtro del tráfico capturado: 
-    - [] ip fuente
-    - [] ip destino
-    - [] puerto fuente
-    - [] puerto destino
-    - [] protocolo
-    - [] entre otros
-- [] exportación a archivo “csv” (requerido) o "xlsx/ods" (opcional), del tráfico capturado.
-- [] manual del usuario, archivo electrónico (mandatorio) o ayuda en línea (opcional).
-- [] reporte 
+    - [ ] exportación a archivo “csv” (requerido) o "xlsx/ods" (opcional), del tráfico capturado.
+- [ ] la interfaz deberá contar con 3 áreas claramente definidas:
+    - [ ] 1. área en donde se muestre el tráfico capturado.
+    - [ ] 2. área en donde se muestre la información de manera estructurada del paquete capturado que se seleccione en el área de tráfico capturado.
+    - [ ] 3. área en donde se muestre el contenido “raw” del paquete capturado que se seleccione en el área de tráfico capturado.
+- [ ] 4 diferentes tipos de filtro del tráfico capturado: 
+    - [ ] ip fuente
+    - [ ] ip destino
+    - [ ] puerto fuente
+    - [ ] puerto destino
+    - [ ] protocolo
+    - [ ] entre otros
+- [ ] manual del usuario, archivo electrónico (mandatorio) o ayuda en línea (opcional).
+- [ ] reporte 
 
 ## Referencias
 
