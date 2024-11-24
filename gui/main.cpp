@@ -9,125 +9,133 @@
 #include <netinet/udp.h>     // udp_header
 #include <netinet/if_ether.h>
 #include <fstream>
+#include <ctime>
+#include <iomanip>
+
 #include "packet.cpp"
 
-// Función para mostrar popup de error
+#define TITLE_FONT_SIZE 24
+#define BODY_FONT_SIZE 20
+
+bool CustomButton(Rectangle box, const char *text, Color buttonColor, Color hoverColor, Color textColor)
+{
+    Vector2 mousePosition = GetMousePosition();
+
+    // Check if mouse is hovering over the button
+    bool isHovered = CheckCollisionPointRec(mousePosition, box);
+
+    // Draw the button with hover effect
+    DrawRectangleRec(box, isHovered ? hoverColor : buttonColor);
+    DrawRectangleLinesEx(box, 1, BLACK); // Adjust thickness as needed
+
+    // Center the text within the button
+    int fontSize = 20;
+    Vector2 textSize = MeasureTextEx(GetFontDefault(), text, fontSize, 1);
+    DrawText(text,
+             box.x + (box.width / 2) - (textSize.x / 2),
+             box.y + (box.height / 2) - (textSize.y / 2),
+             fontSize, textColor);
+
+    // Return true if the button is clicked
+    return isHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+}
+
+// F for costume font
+void DrawTextF(const char *text, float posX, float posY, int fontSize, Color color)
+{
+    // Just ctrlH all DrawText functions to this
+    static const Font custom_font = LoadFont("romulus.png");
+    DrawTextEx(custom_font, text, (Vector2){posX, posY}, fontSize, 1, color);
+}
+
+// Helper function to wrap text
+std::vector<std::string> WrapText(const std::string &text, int maxWidth, int fontSize)
+{
+    std::vector<std::string> lines;
+    std::string line;
+    for (size_t i = 0; i < text.size(); ++i)
+    {
+        line += text[i];
+        if (MeasureText(line.c_str(), fontSize) > maxWidth || text[i] == '\n')
+        {
+            if (text[i] != ' ' && text[i] != '\n')
+            {
+                size_t lastSpace = line.find_last_of(' ');
+                if (lastSpace != std::string::npos)
+                {
+                    lines.push_back(line.substr(0, lastSpace));
+                    line = line.substr(lastSpace + 1);
+                }
+                else
+                {
+                    lines.push_back(line);
+                    line.clear();
+                }
+            }
+            else
+            {
+                lines.push_back(line);
+                line.clear();
+            }
+        }
+    }
+    if (!line.empty())
+        lines.push_back(line);
+    return lines;
+}
 
 void showErrorPopup(const std::string &errorMessage)
 {
-    int screenWidth = GetScreenWidth();
-    int screenHeight = GetScreenHeight();
+    int screen_width = GetScreenWidth();
+    int screen_height = GetScreenHeight();
 
     // Base resolution for scaling
     const float baseWidth = 800.0f;
     const float baseHeight = 600.0f;
 
-    const int basePopupWidth = 600;
-    const int baseTextX = 120;
-    const int baseTextY = 260;
-    const int baseLineHeight = 20;
-    const int baseButtonX = 340;
-    const int baseButtonY = 340;
-    const int baseButtonWidth = 120;
-    const int baseButtonHeight = 40;
-
     while (!WindowShouldClose())
     {
-        float scaleX = screenWidth / baseWidth;
-        float scaleY = screenHeight / baseHeight;
+        float scaleX = screen_width / baseWidth;
+        float scaleY = screen_height / baseHeight;
 
-        int popupWidth = basePopupWidth * scaleX;
+        int popupWidth = 600 * scaleX;
         int popupHeight = 200 * scaleY;
-        int popupX = (screenWidth - popupWidth) / 2;
-        int popupY = (screenHeight - popupHeight) / 2;
-
-        int textX = popupX + 20 * scaleX;
-        int textY = popupY + 60 * scaleY;
-        int lineHeight = baseLineHeight * scaleY;
-
-        int buttonX = popupX + (popupWidth - baseButtonWidth * scaleX) / 2;
-        int buttonY = popupY + popupHeight - baseButtonHeight * scaleY - 20 * scaleY;
-        int buttonWidth = baseButtonWidth * scaleX;
-        int buttonHeight = baseButtonHeight * scaleY;
+        int popupX = (screen_width - popupWidth) / 2;
+        int popupY = (screen_height - popupHeight) / 2;
 
         int textMaxWidth = popupWidth - 40 * scaleX; // Leave padding
-        std::vector<std::string> wrappedText;
+        int fontSize = 18 * scaleY;
 
-        // Function to wrap text
-        auto wrapText = [](const std::string &text, int maxWidth, int fontSize) -> std::vector<std::string>
-        {
-            std::vector<std::string> lines;
-            std::string line;
-            for (size_t i = 0; i < text.size(); ++i)
-            {
-                line += text[i];
-                if (MeasureText(line.c_str(), fontSize) > maxWidth || text[i] == '\n')
-                {
-                    if (text[i] != ' ' && text[i] != '\n')
-                    {
-                        size_t lastSpace = line.find_last_of(' ');
-                        if (lastSpace != std::string::npos)
-                        {
-                            lines.push_back(line.substr(0, lastSpace));
-                            line = line.substr(lastSpace + 1);
-                        }
-                        else
-                        {
-                            lines.push_back(line);
-                            line.clear();
-                        }
-                    }
-                    else
-                    {
-                        lines.push_back(line);
-                        line.clear();
-                    }
-                }
-            }
-            if (!line.empty())
-                lines.push_back(line);
-            return lines;
-        };
-
-        // Rewrap text if resized
-        wrappedText = wrapText(errorMessage, textMaxWidth, scaleY * 18);
+        // Wrap text to fit the popup width
+        std::vector<std::string> wrappedText = WrapText(errorMessage, textMaxWidth, fontSize);
 
         BeginDrawing();
         ClearBackground(DARKGRAY);
 
-        // Draw popup background
-        DrawRectangle(popupX, popupY, popupWidth, popupHeight, RAYWHITE);
-
-        // Draw error title
-        DrawText("Error:", textX, popupY + 20 * scaleY, scaleY * 20, RED);
+        Rectangle error_box = {(float)popupX, (float)popupY, (float)popupWidth, (float)popupHeight};
+        DrawRectangleRec(error_box, LIGHTGRAY);
+        DrawRectangleLinesEx(error_box, 2, BLACK); // Border for the popup
 
         // Draw wrapped text
-        int currentY = textY;
+        int textX = popupX + 20 * scaleX;
+        int textY = popupY + 40 * scaleY;
         for (const auto &line : wrappedText)
         {
-            DrawText(line.c_str(), textX, currentY, scaleY * 18, BLACK);
-            currentY += lineHeight;
+            DrawText(line.c_str(), textX, textY, fontSize, BLACK);
+            textY += fontSize + 2; // Add line spacing
         }
-
-        // Draw Close button
-        DrawRectangle(buttonX, buttonY, buttonWidth, buttonHeight, LIGHTGRAY);
-        DrawText("Close", buttonX + buttonWidth / 4, buttonY + buttonHeight / 4, scaleY * 20, BLACK);
-
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        Rectangle close_button = {
+            popupX + popupWidth / 2 - 60 * scaleX,
+            popupY + popupHeight - 50 * scaleY,
+            120 * scaleX, 30 * scaleY};
+        if (CustomButton(close_button, "close", RAYWHITE, LIGHTGRAY, BLACK))
         {
-            Vector2 mousePosition = GetMousePosition();
-            if (mousePosition.x >= buttonX && mousePosition.x <= buttonX + buttonWidth &&
-                mousePosition.y >= buttonY && mousePosition.y <= buttonY + buttonHeight)
-            {
-                break;
-            }
+            break;
         }
-
-        // Handle resizing
         if (IsWindowResized())
         {
-            screenWidth = GetScreenWidth();
-            screenHeight = GetScreenHeight();
+            screen_width = GetScreenWidth();
+            screen_height = GetScreenHeight();
         }
 
         EndDrawing();
@@ -155,22 +163,52 @@ std::vector<std::pair<std::string, std::string>> getDevices()
     return devices;
 }
 
+void HandleTextInput(std::string &input, const int max_length)
+{
+    int key = GetCharPressed();
 
+    while (key > 0)
+    {
+        if ((key >= 32) && (key <= 125) && input.length() < max_length)
+        {
+            input += (char)key;
+        }
+        key = GetCharPressed();
+    }
 
+    if (!input.empty())
+    {
+        if (IsKeyPressed(KEY_BACKSPACE))
+        {
+            input.pop_back();
+        }
+        if (IsKeyPressed(KEY_DELETE))
+        {
+            input.clear();
+        }
+    }
+}
 
-//Le falta arreglar varias cosas
 void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX, float scaleY, Color color)
 {
-    const int lineLength = 16; // Bytes per line
-    char hexLine[48 + 1];      // 16 bytes * 3 chars each ("XX ") + null terminator
+    const int lineLength = 16;      // Bytes per line
+    char hexLine[48 + 1];           // 16 bytes * 3 chars each ("XX ") + null terminator
     char asciiLine[lineLength + 1]; // 16 chars + null terminator
-    int hexOffset = 0;          // Hex part's character offset
-    int asciiOffset = 0;        // ASCII part's character offset
+    int hexOffset = 0;              // Hex part's character offset
+    int asciiOffset = 0;            // ASCII part's character offset
 
-    float hexX = x * scaleX;  // Starting position for hex
-    float asciiX = (x + 400) * scaleX; // Starting position for ASCII, 400 units to the right
+    // Get screen dimensions for dynamic positioning
+    int screenWidth = GetScreenWidth();
 
-    for (int i = 0; i < size; i++)
+    // Font size and spacing
+    int fontSize = BODY_FONT_SIZE * scaleY;
+    int lineSpacing = 20 * scaleY;
+
+    // Calculate dynamic positions
+    float hexX = x * scaleX;                 // Starting position for hex section
+    float asciiX = hexX + (screenWidth / 2); // ASCII starts after hex, halfway across the screen
+
+    for (int i = 0; i < size; ++i)
     {
         // Add hexadecimal representation to hexLine
         snprintf(&hexLine[hexOffset], 4, "%02X ", data[i]);
@@ -191,13 +229,13 @@ void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX
             asciiLine[asciiOffset] = '\0';
 
             // Draw hex part
-            DrawText(hexLine, hexX, y * scaleY, 18 * scaleY, color);
+            DrawText(hexLine, hexX, y * scaleY, fontSize, color);
 
             // Draw ASCII part aligned with hex
-            DrawText(asciiLine, asciiX, y * scaleY, 18 * scaleY, color);
+            DrawText(asciiLine, asciiX, y * scaleY, fontSize, color);
 
             // Move to next line
-            y += 20 * scaleY;
+            y += lineSpacing;
 
             // Reset offsets
             hexOffset = 0;
@@ -205,11 +243,23 @@ void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX
         }
     }
 }
-
-void showPacketInfoWindow(const Packet &packet)
+std::string getTimeStamp()
 {
-    int screenWidth = GetScreenWidth();
-    int screenHeight = GetScreenHeight();
+    time_t now = std::time(nullptr);
+    tm localTime = *std::localtime(&now);
+    std::stringstream timestamp;
+    timestamp << std::put_time(&localTime, "%Y-%m-%d_%H-%M-%S");
+    return timestamp.str();
+}
+void savePacketRaw(const Packet &packet)
+{
+    // hex or chars?
+    return void();
+}
+void packetRawWindow(const Packet &packet)
+{
+    int screen_width = GetScreenWidth();
+    int screen_height = GetScreenHeight();
 
     // Base resolution for scaling
     const float baseWidth = 800.0f;
@@ -217,8 +267,177 @@ void showPacketInfoWindow(const Packet &packet)
 
     while (!WindowShouldClose())
     {
-        float scaleX = screenWidth / baseWidth;
-        float scaleY = screenHeight / baseHeight;
+        float scaleX = screen_width / baseWidth;
+        float scaleY = screen_height / baseHeight;
+
+        BeginDrawing();
+        ClearBackground(LIGHTGRAY);
+
+        // Title
+        DrawText("Packet Details", 20 * scaleX, 20 * scaleY, 24 * scaleY, DARKGRAY);
+
+        float yOffset = 60 * scaleY; // Vertical spacing offset
+
+        // Display protocol-specific details
+        if (packet.ip_hdr.protocol == "TCP")
+        {
+            // Draw TCP Raw Payload Data
+            DrawText("TCP Raw Payload Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
+            yOffset += 20 * scaleY;
+            DrawPacketData(packet.tcp_hdr.data_payload.data(), packet.tcp_hdr.data_payload.size(),
+                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
+            yOffset += (packet.tcp_hdr.data_payload.size() / 16 + 1) * 20 * scaleY;
+        }
+        else if (packet.ip_hdr.protocol == "UDP")
+        {
+            // Draw UDP Raw Payload Data
+            DrawText("UDP Raw Payload Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
+            yOffset += 20 * scaleY;
+            DrawPacketData(packet.udp_hdr.data_payload.data(), packet.udp_hdr.data_payload.size(),
+                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
+            yOffset += (packet.udp_hdr.data_payload.size() / 16 + 1) * 20 * scaleY;
+        }
+        else if (packet.ip_hdr.protocol == "ICMP")
+        {
+            // Draw ICMP Raw Payload Data
+            DrawText("ICMP Raw Payload Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
+            yOffset += 20 * scaleY;
+            DrawPacketData(packet.icmp_hdr.data_payload.data(), packet.icmp_hdr.data_payload.size(),
+                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
+            yOffset += (packet.icmp_hdr.data_payload.size() / 16 + 1) * 20 * scaleY;
+        }
+        else
+        {
+            DrawText("NO RAW DATA AVAILABLE:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
+            yOffset += 20 * scaleY;
+            yOffset += (packet.icmp_hdr.data_payload.size() / 16 + 1) * 20 * scaleY;
+        }
+
+        // Exit on ESC
+        if (IsKeyPressed(KEY_ESCAPE))
+        {
+            break;
+        }
+        if (IsKeyPressed(KEY_S))
+        {
+            savePacketRaw(packet);
+        }
+
+        // Handle resizing
+        if (IsWindowResized())
+        {
+            screen_width = GetScreenWidth();
+            screen_height = GetScreenHeight();
+        }
+
+        EndDrawing();
+    }
+}
+#include <fstream>
+#include <iostream>
+#include <string>
+
+void savePacketDetails(const Packet &packet)
+{
+    std::string filename = "packet_details_" + getTimeStamp() + ".txt";
+    std::ofstream outFile(filename);
+
+    if (!outFile.is_open())
+    {
+        std::cerr << "Error opening file for writing!" << std::endl;
+        return;
+    }
+
+    // Save Ethernet Header
+    outFile << "Ethernet Source: " << packet.eth_hdr.source << std::endl;
+    outFile << "Ethernet Destination: " << packet.eth_hdr.destiny << std::endl;
+    outFile << "Ethernet Protocol: " << packet.eth_hdr.protocol << std::endl;
+    outFile << std::endl;
+
+    // Save IP Header Data
+    outFile << "IP Header:" << std::endl;
+    outFile << "Version: " << packet.ip_hdr.version << std::endl;
+    outFile << "Header Length: " << packet.ip_hdr.header_length << std::endl;
+    outFile << "Total Length: " << packet.ip_hdr.total_length << std::endl;
+    outFile << "Checksum: " << packet.ip_hdr.checksum << std::endl;
+    outFile << "Protocol: " << packet.ip_hdr.protocol << std::endl;
+    outFile << "IP Header Data: " << std::endl;
+    outFile << "Data: ";
+    for (auto byte : packet.ip_hdr.header_data)
+    {
+        outFile << std::hex << (int)byte << " ";
+    }
+    outFile << std::endl
+            << std::endl;
+
+    // Save protocol-specific details
+    if (packet.ip_hdr.protocol == "TCP")
+    {
+        outFile << "TCP Header:" << std::endl;
+        outFile << "Source Port: " << packet.tcp_hdr.source_port << std::endl;
+        outFile << "Destination Port: " << packet.tcp_hdr.destination_port << std::endl;
+        outFile << "Sequence Number: " << packet.tcp_hdr.sequence_number << std::endl;
+        outFile << "Acknowledgement Number: " << packet.tcp_hdr.acknowledge_number << std::endl;
+        outFile << "Header Length: " << packet.tcp_hdr.header_length << std::endl;
+        outFile << "TCP Header Data: " << std::endl;
+        outFile << "Data: ";
+        for (auto byte : packet.tcp_hdr.header_data)
+        {
+            outFile << std::hex << (int)byte << " ";
+        }
+        outFile << std::endl
+                << std::endl;
+    }
+    else if (packet.ip_hdr.protocol == "UDP")
+    {
+        outFile << "UDP Header:" << std::endl;
+        outFile << "Source Port: " << packet.udp_hdr.source_port << std::endl;
+        outFile << "Destination Port: " << packet.udp_hdr.destination_port << std::endl;
+        outFile << "Length: " << packet.udp_hdr.length << std::endl;
+        outFile << "Checksum: " << packet.udp_hdr.checksum << std::endl;
+        outFile << "UDP Header Data: " << std::endl;
+        outFile << "Data: ";
+        for (auto byte : packet.udp_hdr.header_data)
+        {
+            outFile << std::hex << (int)byte << " ";
+        }
+        outFile << std::endl
+                << std::endl;
+    }
+    else if (packet.ip_hdr.protocol == "ICMP")
+    {
+        outFile << "ICMP Header:" << std::endl;
+        outFile << "Type: " << packet.icmp_hdr.type << std::endl;
+        outFile << "Code: " << packet.icmp_hdr.code << std::endl;
+        outFile << "Checksum: " << packet.icmp_hdr.checksum << std::endl;
+        outFile << "ICMP Header Data: " << std::endl;
+        outFile << "Data: ";
+        for (auto byte : packet.icmp_hdr.header_data)
+        {
+            outFile << std::hex << (int)byte << " ";
+        }
+        outFile << std::endl
+                << std::endl;
+    }
+
+    // Close the file
+    outFile.close();
+    std::cout << "Packet details saved to " << filename << std::endl;
+}
+
+void packetDetailsWindow(const Packet &packet)
+{
+    int screen_width = GetScreenWidth();
+    int screen_height = GetScreenHeight();
+
+    // Base resolution for scaling
+    const float baseWidth = 800.0f;
+    const float baseHeight = 600.0f;
+
+    while (!WindowShouldClose())
+    {
+        float scaleX = screen_width / baseWidth;
+        float scaleY = screen_height / baseHeight;
 
         BeginDrawing();
         ClearBackground(LIGHTGRAY);
@@ -230,41 +449,41 @@ void showPacketInfoWindow(const Packet &packet)
 
         // Display Ethernet Header
         DrawText(TextFormat("Ethernet Source: %s", packet.eth_hdr.source.c_str()),
-                 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
 
         DrawText(TextFormat("Ethernet Destination: %s", packet.eth_hdr.destiny.c_str()),
-                 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
 
         DrawText(TextFormat("Ethernet Protocol: %i", packet.eth_hdr.protocol),
-                 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 30 * scaleY;
 
-    // Draw IP Header Data
-          DrawText("IP Header:", 20 * scaleX, yOffset, 20 * scaleY, DARKGRAY);
+        // Draw IP Header Data
+        DrawText("IP Header:", 20 * scaleX, yOffset, 20 * scaleY, DARKGRAY);
         yOffset += 30 * scaleY;
 
-        DrawText(TextFormat("Version: %i", packet.ip_hdr.version), 
-                 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+        DrawText(TextFormat("Version: %i", packet.ip_hdr.version),
+                 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
 
-        DrawText(TextFormat("Header Length: %i", packet.ip_hdr.header_length), 
-                 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+        DrawText(TextFormat("Header Length: %i", packet.ip_hdr.header_length),
+                 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
 
-        DrawText(TextFormat("Total Length: %i", packet.ip_hdr.total_length), 
-                 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+        DrawText(TextFormat("Total Length: %i", packet.ip_hdr.total_length),
+                 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
 
-        DrawText(TextFormat("Checksum: %i", packet.ip_hdr.checksum), 
-                 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+        DrawText(TextFormat("Checksum: %i", packet.ip_hdr.checksum),
+                 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
 
-        DrawText(TextFormat("Protocol: %s", packet.ip_hdr.protocol.c_str()), 
-                 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+        DrawText(TextFormat("Protocol: %s", packet.ip_hdr.protocol.c_str()),
+                 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
-        DrawText("IP Header Data:", 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+        DrawText("IP Header Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
         DrawPacketData(packet.ip_hdr.header_data.data(), packet.ip_hdr.header_data.size(),
                        20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
@@ -277,38 +496,31 @@ void showPacketInfoWindow(const Packet &packet)
             yOffset += 30 * scaleY;
 
             DrawText(TextFormat("Source Port: %i", packet.tcp_hdr.source_port),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             DrawText(TextFormat("Destination Port: %i", packet.tcp_hdr.destination_port),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             DrawText(TextFormat("Sequence Number: %i", packet.tcp_hdr.sequence_number),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             DrawText(TextFormat("Acknowledgement Number: %i", packet.tcp_hdr.acknowledge_number),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             DrawText(TextFormat("Header Length: %i", packet.tcp_hdr.header_length),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             // Draw TCP Header Data
-            DrawText("TCP Header Data:", 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+            DrawText("TCP Header Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
             DrawPacketData(packet.tcp_hdr.header_data.data(), packet.tcp_hdr.header_data.size(),
                            20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
             yOffset += (packet.tcp_hdr.header_data.size() / 16 + 1) * 20 * scaleY;
-
-            // Draw TCP Payload Data
-            DrawText("TCP Payload Data:", 20 * scaleX, yOffset, 18 * scaleY, BLACK);
-            yOffset += 20 * scaleY;
-            DrawPacketData(packet.tcp_hdr.data_payload.data(), packet.tcp_hdr.data_payload.size(),
-                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
-            yOffset += (packet.tcp_hdr.data_payload.size() / 16 + 1) * 20 * scaleY;
         }
         else if (packet.ip_hdr.protocol == "UDP")
         {
@@ -316,34 +528,27 @@ void showPacketInfoWindow(const Packet &packet)
             yOffset += 30 * scaleY;
 
             DrawText(TextFormat("Source Port: %i", packet.udp_hdr.source_port),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             DrawText(TextFormat("Destination Port: %i", packet.udp_hdr.destination_port),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             DrawText(TextFormat("Length: %i", packet.udp_hdr.length),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             DrawText(TextFormat("Checksum: %i", packet.udp_hdr.checksum),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             // Draw UDP Header Data
-            DrawText("UDP Header Data:", 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+            DrawText("UDP Header Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
             DrawPacketData(packet.udp_hdr.header_data.data(), packet.udp_hdr.header_data.size(),
                            20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
             yOffset += (packet.udp_hdr.header_data.size() / 16 + 1) * 20 * scaleY;
-
-            // Draw UDP Payload Data
-            DrawText("UDP Payload Data:", 20 * scaleX, yOffset, 18 * scaleY, BLACK);
-            yOffset += 20 * scaleY;
-            DrawPacketData(packet.udp_hdr.data_payload.data(), packet.udp_hdr.data_payload.size(),
-                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
-            yOffset += (packet.udp_hdr.data_payload.size() / 16 + 1) * 20 * scaleY;
         }
         else if (packet.ip_hdr.protocol == "ICMP")
         {
@@ -351,44 +556,41 @@ void showPacketInfoWindow(const Packet &packet)
             yOffset += 30 * scaleY;
 
             DrawText(TextFormat("Type: %s", packet.icmp_hdr.type.c_str()),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             DrawText(TextFormat("Code: %i", packet.icmp_hdr.code),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             DrawText(TextFormat("Checksum: %i", packet.icmp_hdr.checksum),
-                    20 * scaleX, yOffset, 18 * scaleY, BLACK);
+                     20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
             // Draw ICMP Header Data
-            DrawText("ICMP Header Data:", 20 * scaleX, yOffset, 18 * scaleY, BLACK);
+            DrawText("ICMP Header Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
             DrawPacketData(packet.icmp_hdr.header_data.data(), packet.icmp_hdr.header_data.size(),
                            20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
             yOffset += (packet.icmp_hdr.header_data.size() / 16 + 1) * 20 * scaleY;
-
-            // Draw ICMP Payload Data
-            DrawText("ICMP Payload Data:", 20 * scaleX, yOffset, 18 * scaleY, BLACK);
-            yOffset += 20 * scaleY;
-            DrawPacketData(packet.icmp_hdr.data_payload.data(), packet.icmp_hdr.data_payload.size(),
-                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
-            yOffset += (packet.icmp_hdr.data_payload.size() / 16 + 1) * 20 * scaleY;
         }
 
-            // Exit on ESC
-            if (IsKeyPressed(KEY_ESCAPE))
-            {
-                break;
-            }
+        // Exit on ESC
+        if (IsKeyPressed(KEY_ESCAPE))
+        {
+            break;
+        }
 
-            // Handle resizing
-            if (IsWindowResized())
-            {
-                screenWidth = GetScreenWidth();
-                screenHeight = GetScreenHeight();
-            }
+        if (IsKeyPressed(KEY_S))
+        {
+            savePacketDetails(packet);
+        }
+        // Handle resizing
+        if (IsWindowResized())
+        {
+            screen_width = GetScreenWidth();
+            screen_height = GetScreenHeight();
+        }
 
         EndDrawing();
     }
@@ -522,6 +724,42 @@ Packet processPacket(const u_char *packet_ptr, int link_hdr_length)
     }
     return packet_info;
 }
+
+void savePacketsCSV(const std::vector<Packet> &packets)
+{
+    // Format the timestamp as "packets_YYYY-MM-DD_HH-MM-SS.csv"
+    std::ostringstream filenameStream;
+    filenameStream << "packets_"
+                   << getTimeStamp()
+                   << ".csv";
+    std::string filename = filenameStream.str();
+
+    // Open the file
+    std::ofstream file(filename);
+    if (!file.is_open())
+    {
+        std::cerr << "Failed to open file for writing: " << filename << std::endl;
+        return;
+    }
+
+    file << "ID,Source,Destiny,Protocol,TTL,TOS\n";
+
+    // Write packet data
+    for (const Packet &packet : packets)
+    {
+        file << std::dec << packet.ip_hdr.id << ","
+             << packet.ip_hdr.source << ","
+             << packet.ip_hdr.destiny << ","
+             << packet.ip_hdr.protocol << ","
+             << packet.ip_hdr.ttl << ","
+             << "0x" << std::hex << std::uppercase << static_cast<int>(packet.ip_hdr.tos) << "\n";
+    }
+
+    file.close();
+
+    std::cout << "Packet data saved to: " << filename << std::endl;
+}
+
 void captureWindow(pcap_t *capture_device, std::string &capture_filter)
 {
     // Apply filter if specified
@@ -558,16 +796,16 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
     const float baseWidth = 800.0f;
     const float baseHeight = 600.0f;
     const int ROW_HEIGHT = 22;
-    const int VISIBLE_ROWS = 22;
+    const int VISIBLE_ROWS = 24;
 
-    int screenWidth = GetScreenWidth();
-    int screenHeight = GetScreenHeight();
+    int screen_width = GetScreenWidth();
+    int screen_height = GetScreenHeight();
 
     // GUI loop
     while (!WindowShouldClose())
     {
-        float scaleX = screenWidth / baseWidth;
-        float scaleY = screenHeight / baseHeight;
+        float scaleX = screen_width / baseWidth;
+        float scaleY = screen_height / baseHeight;
 
         if (!is_paused)
         {
@@ -580,58 +818,59 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
         }
 
         // Handle user input
-        if (IsKeyPressed(KEY_DOWN) && selected_index < static_cast<int>(packets.size()) - 1)
+
+        if (selected_index > 0)
         {
-            selected_index++;
-            if (selected_index - scroll_offset >= VISIBLE_ROWS)
-                scroll_offset++;
+            if (IsKeyPressed(KEY_UP) || IsKeyDown(KEY_LEFT))
+            {
+                selected_index--;
+                if (selected_index < scroll_offset)
+                    scroll_offset--;
+            }
         }
-        if (IsKeyPressed(KEY_UP) && selected_index > 0)
+        if (selected_index < static_cast<int>(packets.size()) - 1)
         {
-            selected_index--;
-            if (selected_index < scroll_offset)
-                scroll_offset--;
+            if (IsKeyDown(KEY_RIGHT) || IsKeyPressed(KEY_DOWN))
+            {
+                selected_index++;
+                if (selected_index - scroll_offset >= ROW_HEIGHT)
+                    scroll_offset++;
+            }
         }
-        if (IsKeyDown(KEY_RIGHT) && selected_index < static_cast<int>(packets.size()) - 1)
-        {
-            selected_index++;
-            if (selected_index - scroll_offset >= VISIBLE_ROWS)
-                scroll_offset++;
-        }
-        if (IsKeyDown(KEY_LEFT) && selected_index > 0)
-        {
-            selected_index--;
-            if (selected_index < scroll_offset)
-                scroll_offset--;
-        }
+
         if (IsKeyPressed(KEY_P))
             is_paused = !is_paused;
 
         if (IsKeyPressed(KEY_C))
             packets.clear();
+        if (IsKeyPressed(KEY_S) && !packets.empty())
+            savePacketsCSV(packets); // TODO
 
-        if (IsKeyPressed(KEY_ENTER) && !packets.empty())
-            showPacketInfoWindow(packets[selected_index]);
+        if (IsKeyPressed(KEY_D) && !packets.empty())
+            packetDetailsWindow(packets[selected_index]);
+
+        if (IsKeyPressed(KEY_R) && !packets.empty())
+            packetRawWindow(packets[selected_index]);
 
         // GUI rendering
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
         // Top menu with dynamic text
-        DrawText(TextFormat("Options: P = %s | UP/DOWN = Select Packet | ENTER = View Raw Data",
+        DrawText(TextFormat("P = %s | ARROWS = Select | C = clear | S = save | D = Details | R = Raw ",
                             is_paused ? "Resume" : "Pause"),
-                 10 * scaleX, 10 * scaleY, 18 * scaleY, DARKGRAY);
+                 10 * scaleX, 10 * scaleY, BODY_FONT_SIZE * scaleY, DARKGRAY);
 
         // Table header
-        DrawRectangle(10 * scaleX, 40 * scaleY, 780 * scaleX, 20 * scaleY, LIGHTGRAY);
-        DrawLine(10 * scaleX, 60 * scaleY, 790 * scaleX, 60 * scaleY, DARKGRAY);
+        DrawRectangle(10 * scaleX, 40 * scaleY, 780 * scaleX, 25 * scaleY, LIGHTGRAY);
+        DrawLine(10 * scaleX, 65 * scaleY, 790 * scaleX, 65 * scaleY, DARKGRAY);
 
-        DrawText("ID", 20 * scaleX, 45 * scaleY, 18 * scaleY, BLACK);
-        DrawText("SRC IP", 70 * scaleX, 45 * scaleY, 18 * scaleY, BLACK);
-        DrawText("DST IP", 250 * scaleX, 45 * scaleY, 18 * scaleY, BLACK);
-        DrawText("TTL", 550 * scaleX, 45 * scaleY, 18 * scaleY, BLACK);
-        DrawText("TOS", 600 * scaleX, 45 * scaleY, 18 * scaleY, BLACK);
-        DrawText("PROTO", 450 * scaleX, 45 * scaleY, 18 * scaleY, BLACK);
+        DrawText("ID", 20 * scaleX, 45 * scaleY, BODY_FONT_SIZE * scaleY, BLACK);
+        DrawText("SOURCE IP", 120 * scaleX, 45 * scaleY, BODY_FONT_SIZE * scaleY, BLACK);
+        DrawText("DESTINY IP", 300 * scaleX, 45 * scaleY, BODY_FONT_SIZE * scaleY, BLACK);
+        DrawText("PROTOCOL", 470 * scaleX, 45 * scaleY, BODY_FONT_SIZE * scaleY, BLACK);
+        DrawText("TTL", 630 * scaleX, 45 * scaleY, BODY_FONT_SIZE * scaleY, BLACK);
+        DrawText("TOS", 690 * scaleX, 45 * scaleY, BODY_FONT_SIZE * scaleY, BLACK);
 
         // Draw packet data
         int y_offset = 70 * scaleY;
@@ -640,21 +879,21 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
             const auto &packet = packets[i];
             Color row_color = (i == selected_index) ? SKYBLUE : BLACK;
 
-            DrawText(TextFormat("%d", packet.ip_hdr.id), 20 * scaleX, y_offset, 18 * scaleY, row_color);
-            DrawText(packet.ip_hdr.source.c_str(), 70 * scaleX, y_offset, 18 * scaleY, row_color);
-            DrawText(packet.ip_hdr.destiny.c_str(), 250 * scaleX, y_offset, 18 * scaleY, row_color);
-            DrawText(TextFormat("%d", packet.ip_hdr.ttl), 550 * scaleX, y_offset, 18 * scaleY, row_color);
-            DrawText(TextFormat("0x%02X", packet.ip_hdr.tos), 600 * scaleX, y_offset, 18 * scaleY, row_color);
-            DrawText(packet.ip_hdr.protocol.c_str(), 450 * scaleX, y_offset, 18 * scaleY, row_color);
+            DrawText(TextFormat("%d", packet.ip_hdr.id), 20 * scaleX, y_offset, BODY_FONT_SIZE * scaleY, row_color);
+            DrawText(packet.ip_hdr.source.c_str(), 120 * scaleX, y_offset, BODY_FONT_SIZE * scaleY, row_color);
+            DrawText(packet.ip_hdr.destiny.c_str(), 300 * scaleX, y_offset, BODY_FONT_SIZE * scaleY, row_color);
+            DrawText(packet.ip_hdr.protocol.c_str(), 470 * scaleX, y_offset, BODY_FONT_SIZE * scaleY, row_color);
+            DrawText(TextFormat("%d", packet.ip_hdr.ttl), 630 * scaleX, y_offset, BODY_FONT_SIZE * scaleY, row_color);
+            DrawText(TextFormat("0x%02X", packet.ip_hdr.tos), 690 * scaleX, y_offset, BODY_FONT_SIZE * scaleY, row_color);
 
             y_offset += ROW_HEIGHT * scaleY;
         }
 
         // Draw Scrollbar
-        if (packets.size() > VISIBLE_ROWS)
+        if (packets.size() > ROW_HEIGHT)
         {
-            float tableHeight = screenHeight - (70 * scaleY); // Available height for the table
-            float scrollbar_height = tableHeight * (static_cast<float>(VISIBLE_ROWS) / packets.size());
+            float tableHeight = screen_height - (70 * scaleY); // Available height for the table
+            float scrollbar_height = tableHeight * (static_cast<float>(ROW_HEIGHT) / packets.size());
             float scrollbar_pos = tableHeight * (static_cast<float>(scroll_offset) / packets.size());
 
             if (scrollbar_height > tableHeight)
@@ -663,39 +902,178 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
             DrawRectangle(790 * scaleX, (40 * scaleY) + scrollbar_pos, 10 * scaleX, scrollbar_height, DARKGRAY);
         }
 
+        screen_width = GetScreenWidth();
+        screen_height = GetScreenHeight();
+
+        EndDrawing();
+    }
+}
+
+void filterWindow(std::string &capture_filter)
+{
+    int screen_width = GetScreenWidth();
+    int screen_height = GetScreenHeight();
+
+    // Base resolution for scaling
+    const float baseWidth = 800.0f;
+    const float baseHeight = 600.0f;
+
+    // Filter text boxes and states
+    Rectangle textBoxes[5] = {
+        {10, 80, 780, 40},  // IP Source
+        {10, 140, 780, 40}, // IP Destination
+        {10, 200, 780, 40}, // TCP Source Port
+        {10, 260, 780, 40}, // TCP Destination Port
+        {10, 320, 780, 40}  // Host
+    };
+
+    const std::vector<std::string> labels = {"IP Source:", "IP Destination:", "TCP Src Port:", "TCP Dst Port:", "Host:"};
+    const int inputs_size = 5;
+    std::vector<std::string> input_buffers(inputs_size, ""); // Initialize input buffers
+    std::vector<bool> mouseOnText(inputs_size, false);
+
+    bool showWindow = true;
+
+    while (showWindow && !WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(DARKGRAY);
+
+        float scaleX = screen_width / baseWidth;
+        float scaleY = screen_height / baseHeight;
+
+        for (int i = 0; i < inputs_size; ++i)
+        {
+            // Adjust scaled rectangle for the current text box
+            Rectangle scaledTextBox = {
+                textBoxes[i].x * scaleX,
+                textBoxes[i].y * scaleY,
+                textBoxes[i].width * scaleX,
+                textBoxes[i].height * scaleY};
+
+            // Draw label and input box
+            DrawText(labels[i].c_str(), scaledTextBox.x, scaledTextBox.y - 20, scaleY + 20, WHITE);
+            DrawRectangleRec(scaledTextBox, LIGHTGRAY);
+
+            if (mouseOnText[i])
+                DrawRectangleLinesEx(scaledTextBox, 2, RED);
+            else
+                DrawRectangleLinesEx(scaledTextBox, 2, BLACK);
+
+            // Show the current text inside the input box
+            DrawText(input_buffers[i].c_str(), scaledTextBox.x + 5, scaledTextBox.y + 10, scaleY * 20, BLACK);
+
+            // Handle mouse interaction
+            if (CheckCollisionPointRec(GetMousePosition(), scaledTextBox))
+            {
+                SetMouseCursor(MOUSE_CURSOR_IBEAM);
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+                {
+                    for (int j = 0; j < inputs_size; ++j)
+                        mouseOnText[j] = (j == i); // Select the clicked box
+                }
+            }
+
+            // Handle text input for the active box
+            if (mouseOnText[i])
+            {
+                HandleTextInput(input_buffers[i], 100); // Use the provided function
+            }
+        }
+
+        // Apply button
+        Rectangle applyButton = {250 * scaleX, 400 * scaleY, 80 * scaleX, 30 * scaleY};
+
+        if (CustomButton(applyButton, "Apply", LIGHTGRAY, DARKGRAY, BLACK))
+        {
+
+            // Construct the filter string
+            capture_filter.clear();
+            if (!input_buffers[0].empty())
+                capture_filter += "ip.src == " + input_buffers[0];
+            if (!input_buffers[1].empty())
+            {
+                if (!capture_filter.empty())
+                    capture_filter += " and ";
+                capture_filter += "ip.dst == " + input_buffers[1];
+            }
+            if (!input_buffers[2].empty())
+            {
+                if (!capture_filter.empty())
+                    capture_filter += " and ";
+                capture_filter += "tcp.srcport == " + input_buffers[2];
+            }
+            if (!input_buffers[3].empty())
+            {
+                if (!capture_filter.empty())
+                    capture_filter += " and ";
+                capture_filter += "tcp.dstport == " + input_buffers[3];
+            }
+            if (!input_buffers[4].empty())
+            {
+                if (!capture_filter.empty())
+                    capture_filter += " and ";
+                capture_filter += "host " + input_buffers[4];
+            }
+            showWindow = false; // Close the filter window
+        }
+
+        // Cancel button
+        Rectangle cancelButton = {370 * scaleX, 400 * scaleY, 80 * scaleX, 30 * scaleY};
+        if (CustomButton(cancelButton, "Cancel", LIGHTGRAY, DARKGRAY, BLACK))
+        {
+
+            screen_width = GetScreenWidth();
+            screen_height = GetScreenHeight();
+            showWindow = false; // Close the filter window
+        }
+
+        // Handle window resizing
         if (IsWindowResized())
         {
-            screenWidth = GetScreenWidth();
-            screenHeight = GetScreenHeight();
+            screen_width = GetScreenWidth();
+            screen_height = GetScreenHeight();
         }
 
         EndDrawing();
     }
 }
 
-void firstWindow(std::string &selected_device, std::string &capture_filter)
+void deviceWindow(std::string &selected_device, std::string &capture_filter)
 {
     std::vector<std::pair<std::string, std::string>> devices = getDevices();
     int selected_index = 0;
     char error_buffer[PCAP_ERRBUF_SIZE];
-    int screenWidth = GetScreenWidth();
-    int screenHeight = GetScreenHeight();
+    int screen_width = GetScreenWidth();
+    int screen_height = GetScreenHeight();
 
     // Base resolution for scaling
     const float baseWidth = 800.0f;
     const float baseHeight = 600.0f;
 
     Rectangle textBox = {10, 80, 780, 40}; // Define a rectangle for the capture filter input box
-    bool mouseOnText = false;
     int framesCounter = 0;
 
     while (!WindowShouldClose())
     {
+        if (IsKeyPressed(KEY_DOWN) && selected_index < (int)devices.size() - 1)
+        {
+            selected_index++;
+        }
+        if (IsKeyPressed(KEY_UP) && selected_index > 0)
+        {
+            selected_index--;
+        }
+        if (IsKeyPressed(KEY_ENTER) && !devices.empty())
+        {
+            selected_device = devices[selected_index].first;
+            break;
+        }
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        float scaleX = screenWidth / baseWidth;
-        float scaleY = screenHeight / baseHeight;
+        float scaleX = screen_width / baseWidth;
+        float scaleY = screen_height / baseHeight;
 
         // Adjust the positions and sizes using scaleX and scaleY
         DrawText("Capture:", scaleX * 10, scaleY * 10, scaleY * 20, DARKGRAY);
@@ -712,16 +1090,29 @@ void firstWindow(std::string &selected_device, std::string &capture_filter)
 
         // Draw the input box
         DrawRectangleRec(scaledTextBox, LIGHTGRAY);
-        if (mouseOnText)
+
+        if (CheckCollisionPointRec(GetMousePosition(), scaledTextBox))
+        {
             DrawRectangleLines((int)scaledTextBox.x, (int)scaledTextBox.y, (int)scaledTextBox.width, (int)scaledTextBox.height, RED);
+            SetMouseCursor(MOUSE_CURSOR_IBEAM); // Change cursor to I-beam when over the text box
+            HandleTextInput(capture_filter, screen_width / 12);
+        }
         else
+        {
             DrawRectangleLines((int)scaledTextBox.x, (int)scaledTextBox.y, (int)scaledTextBox.width, (int)scaledTextBox.height, DARKGRAY);
+            SetMouseCursor(MOUSE_CURSOR_DEFAULT); // Reset cursor when not over the text box
+        }
 
         // Show the current capture filter text inside the input box
         DrawText(capture_filter.c_str(), (int)(scaledTextBox.x + 5), (int)(scaledTextBox.y + 8), scaleY * 20, BLACK);
+        Rectangle filter_window = {10 * scaleX, 130 * scaleY, 140 * scaleX, 30 * scaleY};
 
+        if (CustomButton(filter_window, "Set Filters", LIGHTGRAY, DARKGRAY, BLACK))
+        {
+            filterWindow(capture_filter); // Call the filter window
+        }
         // Move down the devices section
-        int devicesStartY = screenHeight / 4; // Adjust devices start position
+        int devicesStartY = screen_height / 3; // Adjust devices start position
 
         // Display device selection
         DrawText("Select a device/interface:", scaleX * 10, devicesStartY, scaleY * 20, DARKGRAY);
@@ -736,59 +1127,8 @@ void firstWindow(std::string &selected_device, std::string &capture_filter)
             DrawText(device_name_description.c_str(), scaleX * 20, devicesStartY + scaleY * (35 + i * 30), scaleY * 20, BLACK);
         }
 
-        if (IsKeyPressed(KEY_DOWN) && selected_index < (int)devices.size() - 1)
-        {
-            selected_index++;
-        }
-        if (IsKeyPressed(KEY_UP) && selected_index > 0)
-        {
-            selected_index--;
-        }
-        if (IsKeyPressed(KEY_ENTER) && !devices.empty())
-        {
-            selected_device = devices[selected_index].first;
-            break;
-        }
-        if (IsWindowResized())
-        {
-            screenWidth = GetScreenWidth();
-            screenHeight = GetScreenHeight();
-        }
-
-        // Handle filter text input (Raylib input box logic)
-        if (CheckCollisionPointRec(GetMousePosition(), scaledTextBox))
-        {
-            mouseOnText = true;
-            SetMouseCursor(MOUSE_CURSOR_IBEAM); // Change cursor to I-beam when over the text box
-        }
-        else
-        {
-            mouseOnText = false;
-            SetMouseCursor(MOUSE_CURSOR_DEFAULT); // Reset cursor when not over the text box
-        }
-
-        if (mouseOnText)
-        {
-            // Get the next character pressed (unicode)
-            int key = GetCharPressed();
-
-            // Process all the characters in the input queue
-            while (key > 0)
-            {
-                // Only allow printable characters within the valid range (32 to 125)
-                if ((key >= 32) && (key <= 125) && capture_filter.length() < 100)
-                {
-                    capture_filter += (char)key; // Append the character to the capture filter string
-                }
-                key = GetCharPressed(); // Check for more characters in the input buffer
-            }
-
-            // Handle backspace
-            if (IsKeyPressed(KEY_BACKSPACE) && !capture_filter.empty())
-            {
-                capture_filter.pop_back(); // Remove the last character if backspace is pressed
-            }
-        }
+        screen_width = GetScreenWidth();
+        screen_height = GetScreenHeight();
 
         EndDrawing();
     }
@@ -798,12 +1138,13 @@ int main()
 {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "pcapsule");
-    SetTargetFPS(60);
     SetExitKey(KEY_NULL);
     std::string selected_device;
     std::string capture_filter;
-    firstWindow(selected_device, capture_filter);
 
+    deviceWindow(selected_device, capture_filter);
+
+    // Try to open capture device
     char error_buffer[PCAP_ERRBUF_SIZE];
     pcap_t *capture_device = pcap_open_live(selected_device.c_str(), BUFSIZ, 0, -1, error_buffer);
     if (capture_device == nullptr)

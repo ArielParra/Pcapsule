@@ -52,21 +52,21 @@ g++.exe main.cpp -lwpcap
 - [x] uso de librería libpcap para (Linux/MacOS)
 - [x] interfaz basada en texto amigable con el usuario (requerida)
 - [x] interfaz gráfica amigable con el usuario (opcional)
-- [ ] captura y análisis de paquetes,
+- [x] captura y análisis de paquetes,
     - [x] parada/inicio
     - [x] filtros de captura,
-    - [ ] exportación a archivo “csv” (requerido) o "xlsx/ods" (opcional), del tráfico capturado.
-- [ ] la interfaz deberá contar con 3 áreas claramente definidas:
-    - [ ] 1. área en donde se muestre el tráfico capturado.
-    - [ ] 2. área en donde se muestre la información de manera estructurada del paquete capturado que se seleccione en el área de tráfico capturado.
-    - [ ] 3. área en donde se muestre el contenido “raw” del paquete capturado que se seleccione en el área de tráfico capturado.
-- [ ] 4 diferentes tipos de filtro del tráfico capturado: 
-    - [ ] ip fuente
-    - [ ] ip destino
-    - [ ] puerto fuente
-    - [ ] puerto destino
-    - [ ] protocolo
-    - [ ] entre otros
+    - [x] exportación a archivo “csv” (requerido) o "xlsx/ods" (opcional), del tráfico capturado.
+- [x] la interfaz deberá contar con 3 áreas claramente definidas:
+    - [x] 1. área en donde se muestre el tráfico capturado.
+    - [x] 2. área en donde se muestre la información de manera estructurada del paquete capturado que se seleccione en el área de tráfico capturado.
+    - [x] 3. área en donde se muestre el contenido “raw” del paquete capturado que se seleccione en el área de tráfico capturado.
+- [x] 4 diferentes tipos de filtro del tráfico capturado: 
+    - [x] ip fuente
+    - [x] ip destino
+    - [x] puerto fuente
+    - [x] puerto destino
+    - [x] protocolo
+    - [x] entre otros
 - [ ] manual del usuario, archivo electrónico (mandatorio) o ayuda en línea (opcional).
 - [ ] reporte 
 

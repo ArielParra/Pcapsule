@@ -3,4 +3,5 @@ a.out
 a.exe
 pcapsule-Linux
 pcapsule-Windows
-*.cvs
+*.csv
+gui/*.csv
