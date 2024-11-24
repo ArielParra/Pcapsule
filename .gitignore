@@ -1,7 +1,7 @@
 .vscode/
 a.out
 a.exe
-pcapsule-Linux
-pcapsule-Windows
+gui/pcapsule-Linux
+gui/*.exe
 *.csv
 gui/*.csv

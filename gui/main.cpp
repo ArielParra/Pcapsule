@@ -1,18 +1,12 @@
-#include "raylib.h"
 #include <vector>
 #include <iostream>
 #include <string>
 #include <utility>
-#include <pcap/pcap.h>       // inet_ntoa
-#include <netinet/ip_icmp.h> // icmp_header
-#include <netinet/tcp.h>     // tcp_header
-#include <netinet/udp.h>     // udp_header
-#include <netinet/if_ether.h>
 #include <fstream>
 #include <ctime>
 #include <iomanip>
-
-#include "packet.cpp"
+#include "packet.h"
+#include "raylib.h"
 
 #define TITLE_FONT_SIZE 24
 #define BODY_FONT_SIZE 20
@@ -1123,7 +1117,11 @@ void deviceWindow(std::string &selected_device, std::string &capture_filter)
             {
                 DrawRectangle(scaleX * 10, devicesStartY + scaleY * (30 + i * 30), scaleX * 780, scaleY * 30, LIGHTGRAY);
             }
-            std::string device_name_description = devices[i].first + " - " + devices[i].second;
+            #if defined(_WIN32)
+                std::string device_name_description = devices[i].second;
+            #else 
+                std::string device_name_description = devices[i].first + " - " + devices[i].second;
+            #endif
             DrawText(device_name_description.c_str(), scaleX * 20, devicesStartY + scaleY * (35 + i * 30), scaleY * 20, BLACK);
         }
 
