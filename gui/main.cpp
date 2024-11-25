@@ -192,43 +192,43 @@ void HandleTextInput(std::string &input, const int max_length)
 
 void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX, float scaleY, Color color)
 {
-    const int lineLength = 16;
-    char hexLine[48 + 1];
+    const int lineLength = 16; 
+    char hexLine[48 + 1];      
     char asciiLine[lineLength + 1];
     int hexOffset = 0;
     int asciiOffset = 0;
 
-     // Font size and spacing
+    // Font size and spacing
     int fontSize = BODY_FONT_SIZE * scaleY;
     int lineSpacing = 20 * scaleY;
 
-     // Calculate dynamic positions
+    // Calculate dynamic positions
     float hexX = x * scaleX;
     int hexBlockWidth = MeasureText("XX ", fontSize) * lineLength;
     float asciiX = hexX + hexBlockWidth + (10 * scaleX);
 
     for (int i = 0; i < size; ++i)
-    {
-        // Add hexadecimal representation to hexLine
+    {     // Add hexadecimal representation to hexLine
         snprintf(&hexLine[hexOffset], 4, "%02X ", data[i]);
         hexOffset += 3;
 
-         // Add ASCII or dot representation to asciiLine
+          // Add ASCII or dot representation to asciiLine
         asciiLine[asciiOffset] = (data[i] >= 32 && data[i] <= 128) ? (char)data[i] : '.';
         asciiOffset++;
+
         if ((i + 1) % lineLength == 0 || i == size - 1)
-        {    
-            // Null-terminate the lines
+        {  
+              // Null-terminate the lines
             hexLine[hexOffset] = '\0';
             asciiLine[asciiOffset] = '\0';
 
-            // Draw hex part
-            DrawText(hexLine, hexX, y * scaleY, fontSize, color);
+            /// Draw hex part
+            DrawText(hexLine, hexX, y, fontSize, color);
 
-             // Draw ASCII part aligned with hex
-            DrawText(asciiLine, asciiX, y * scaleY, fontSize, color);
+            // Draw ASCII part aligned with hex
+            DrawText(asciiLine, asciiX, y, fontSize, color);
 
-             // Move to next line
+            // Move to next line
             y += lineSpacing;
 
              // Reset offsets
@@ -237,6 +237,7 @@ void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX
         }
     }
 }
+
 
 std::string getTimeStamp()
 {
@@ -331,9 +332,12 @@ void packetRawWindow(const Packet &packet)
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <iomanip>
+using namespace std;
 
 void savePacketDetails(const Packet &packet)
 {
+    
     std::string filename = "packet_details_" + getTimeStamp() + ".txt";
     std::ofstream outFile(filename);
 
@@ -437,10 +441,13 @@ void packetDetailsWindow(const Packet &packet)
         BeginDrawing();
         ClearBackground(LIGHTGRAY);
 
+        float yOffset= 20 *scaleY;
+
         // Title
         DrawText("Packet Details", 20 * scaleX, 20 * scaleY, 24 * scaleY, DARKGRAY);
+        yOffset += 20 *scaleY;
 
-        float yOffset = 60 * scaleY; // Vertical spacing offset
+       // float yOffset = 60 * scaleY; // Vertical spacing offset
 
         // Display Ethernet Header
         DrawText(TextFormat("Ethernet Source: %s", packet.eth_hdr.source.c_str()),
@@ -453,19 +460,19 @@ void packetDetailsWindow(const Packet &packet)
 
         DrawText(TextFormat("Ethernet Protocol: %i", packet.eth_hdr.protocol),
                  20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
-        yOffset += 30 * scaleY;
+        yOffset += 40 * scaleY;
 
         // Draw IP Header Data
         DrawText("IP Header:", 20 * scaleX, yOffset, 20 * scaleY, DARKGRAY);
-        yOffset += 30 * scaleY;
+        yOffset += 40 * scaleY;
 
         DrawText(TextFormat("Version: %i", packet.ip_hdr.version),
                  20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
-        yOffset += 20 * scaleY;
+        yOffset += 40 * scaleY;
 
         DrawText(TextFormat("Header Length: %i", packet.ip_hdr.header_length),
                  20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
-        yOffset += 20 * scaleY;
+        yOffset += 30 * scaleY;
 
         DrawText(TextFormat("Total Length: %i", packet.ip_hdr.total_length),
                  20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
@@ -478,11 +485,15 @@ void packetDetailsWindow(const Packet &packet)
         DrawText(TextFormat("Protocol: %s", packet.ip_hdr.protocol.c_str()),
                  20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
+
         DrawText("IP Header Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
+       
+
         DrawPacketData(packet.ip_hdr.header_data.data(), packet.ip_hdr.header_data.size(),
                        20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
-        yOffset += (packet.ip_hdr.header_data.size() / 16 + 1) * 20 * scaleY;
+        yOffset += ((packet.ip_hdr.header_data.size() / 16 + 1) * 20 * scaleY) +40 * scaleY;
+        
 
         // Display protocol-specific details
         if (packet.ip_hdr.protocol == "TCP")
@@ -590,6 +601,7 @@ void packetDetailsWindow(const Packet &packet)
         EndDrawing();
     }
 }
+
 
 Packet processPacket(const u_char *packet_ptr, int link_hdr_length)
 {
