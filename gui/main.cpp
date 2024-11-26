@@ -78,7 +78,7 @@ std::vector<std::string> WrapText(const std::string &text, int maxWidth, int fon
     return lines;
 }
 
-void showErrorPopup(const std::string &errorMessage)
+void showPopup(const std::string &message)
 {
     int screen_width = GetScreenWidth();
     int screen_height = GetScreenHeight();
@@ -101,7 +101,7 @@ void showErrorPopup(const std::string &errorMessage)
         int fontSize = 18 * scaleY;
 
         // Wrap text to fit the popup width
-        std::vector<std::string> wrappedText = WrapText(errorMessage, textMaxWidth, fontSize);
+        std::vector<std::string> wrappedText = WrapText(message, textMaxWidth, fontSize);
 
         BeginDrawing();
         ClearBackground(DARKGRAY);
@@ -126,6 +126,7 @@ void showErrorPopup(const std::string &errorMessage)
         {
             break;
         }
+        
         if (IsWindowResized())
         {
             screen_width = GetScreenWidth();
@@ -144,7 +145,7 @@ std::vector<std::pair<std::string, std::string>> getDevices()
 
     if (pcap_findalldevs(&alldevs, error_buffer))
     {
-        showErrorPopup("ERROR: pcap_findalldevs() -> " + std::string(error_buffer));
+        showPopup("ERROR: pcap_findalldevs() -> " + std::string(error_buffer));
     }
 
     for (pcap_if_t *dev = alldevs; dev; dev = dev->next)
@@ -183,11 +184,10 @@ void HandleTextInput(std::string &input, const int max_length)
     }
 }
 
-
 void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX, float scaleY, Color color)
 {
-    const int lineLength = 16; 
-    char hexLine[48 + 1];      
+    const int lineLength = 16;
+    char hexLine[48 + 1];
     char asciiLine[lineLength + 1];
     int hexOffset = 0;
     int asciiOffset = 0;
@@ -202,17 +202,17 @@ void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX
     float asciiX = hexX + hexBlockWidth + (10 * scaleX);
 
     for (int i = 0; i < size; ++i)
-    {     // Add hexadecimal representation to hexLine
+    { // Add hexadecimal representation to hexLine
         snprintf(&hexLine[hexOffset], 4, "%02X ", data[i]);
         hexOffset += 3;
 
-          // Add ASCII or dot representation to asciiLine
+        // Add ASCII or dot representation to asciiLine
         asciiLine[asciiOffset] = (data[i] >= 32 && data[i] <= 128) ? (char)data[i] : '.';
         asciiOffset++;
 
         if ((i + 1) % lineLength == 0 || i == size - 1)
-        {  
-              // Null-terminate the lines
+        {
+            // Null-terminate the lines
             hexLine[hexOffset] = '\0';
             asciiLine[asciiOffset] = '\0';
 
@@ -225,14 +225,12 @@ void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX
             // Move to next line
             y += lineSpacing;
 
-             // Reset offsets
+            // Reset offsets
             hexOffset = 0;
             asciiOffset = 0;
         }
     }
 }
-
-
 std::string getTimeStamp()
 {
     time_t now = std::time(nullptr);
@@ -241,11 +239,213 @@ std::string getTimeStamp()
     timestamp << std::put_time(&localTime, "%Y-%m-%d_%H-%M-%S");
     return timestamp.str();
 }
+
+void savePacketRawASCII(const Packet &packet)
+{
+    // Generate filename with timestamp
+    std::string filename = "packet_raw_ascii_" + getTimeStamp() + ".txt";
+    std::ofstream outFile(filename);
+
+    if (!outFile.is_open())
+    {
+        showPopup("ERROR: opening " + filename + " file for writing!");
+        return;
+    }
+
+    // Lambda to format a byte as ASCII or a dot for non-printables
+    auto toAscii = [](uint8_t byte) -> char
+    {
+        return (byte >= 32 && byte <= 126) ? (char)byte : '.';
+    };
+
+    // Save protocol-specific details
+    if (packet.ip_hdr.protocol == "TCP")
+    {
+        outFile << "Protocol: TCP" << std::endl;
+        for (size_t i = 0; i < packet.tcp_hdr.data_payload.size(); ++i)
+        {
+            outFile << toAscii(packet.tcp_hdr.data_payload[i]);
+            if ((i + 1) % 16 == 0) // Line break after 16 bytes
+                outFile << std::endl;
+        }
+        outFile << std::endl;
+    }
+    else if (packet.ip_hdr.protocol == "UDP")
+    {
+        outFile << "Protocol: UDP" << std::endl;
+        for (size_t i = 0; i < packet.udp_hdr.data_payload.size(); ++i)
+        {
+            outFile << toAscii(packet.udp_hdr.data_payload[i]);
+            if ((i + 1) % 16 == 0)
+                outFile << std::endl;
+        }
+        outFile << std::endl;
+    }
+    else if (packet.ip_hdr.protocol == "ICMP")
+    {
+        outFile << "Protocol: ICMP" << std::endl;
+        for (size_t i = 0; i < packet.icmp_hdr.data_payload.size(); ++i)
+        {
+            outFile << toAscii(packet.icmp_hdr.data_payload[i]);
+            if ((i + 1) % 16 == 0)
+                outFile << std::endl;
+        }
+        outFile << std::endl;
+    }
+    else
+    {
+        outFile << "Protocol: Unknown (" << packet.ip_hdr.protocol << ")" << std::endl;
+    }
+
+    outFile.close();
+    showPopup("ASCII packet saved to " + filename);
+}
+
+void savePacketRawHex(const Packet &packet)
+{
+    // Generate filename with timestamp
+    std::string filename = "packet_raw_hex_" + getTimeStamp() + ".txt";
+    std::ofstream outFile(filename);
+
+    if (!outFile.is_open())
+    {
+        showPopup("ERROR: opening " + filename + " file for writing!");
+        return;
+    }
+
+    // Save protocol-specific details
+    if (packet.ip_hdr.protocol == "TCP")
+    {
+        outFile << "Protocol: TCP" << std::endl;
+        for (size_t i = 0; i < packet.tcp_hdr.data_payload.size(); ++i)
+        {
+            outFile << std::hex << std::setw(2) << std::setfill('0') << (int)packet.tcp_hdr.data_payload[i] << " ";
+            if ((i + 1) % 16 == 0) // Line break after 16 bytes
+                outFile << std::endl;
+        }
+        outFile << std::endl;
+    }
+    else if (packet.ip_hdr.protocol == "UDP")
+    {
+        outFile << "Protocol: UDP" << std::endl;
+        for (size_t i = 0; i < packet.udp_hdr.data_payload.size(); ++i)
+        {
+            outFile << std::hex << std::setw(2) << std::setfill('0') << (int)packet.udp_hdr.data_payload[i] << " ";
+            if ((i + 1) % 16 == 0)
+                outFile << std::endl;
+        }
+        outFile << std::endl;
+    }
+    else if (packet.ip_hdr.protocol == "ICMP")
+    {
+        outFile << "Protocol: ICMP" << std::endl;
+        for (size_t i = 0; i < packet.icmp_hdr.data_payload.size(); ++i)
+        {
+            outFile << std::hex << std::setw(2) << std::setfill('0') << (int)packet.icmp_hdr.data_payload[i] << " ";
+            if ((i + 1) % 16 == 0)
+                outFile << std::endl;
+        }
+        outFile << std::endl;
+    }
+    else
+    {
+        outFile << "Protocol: Unknown (" << packet.ip_hdr.protocol << ")" << std::endl;
+    }
+
+    // Reset formatting and close the file
+    outFile << std::dec;
+    outFile.close();
+    showPopup("Hex packet saved to " + filename);
+}
+
 void savePacketRaw(const Packet &packet)
 {
-    // hex or chars?
-    return void();
+    // Generate filename with timestamp
+    std::string filename = "packet_raw_" + getTimeStamp() + ".txt";
+    std::ofstream outFile(filename);
+
+    if (!outFile.is_open())
+    {
+        showPopup("ERROR: opening " + filename + " file for writing!");
+        return;
+    }
+
+    // Lambda to format a byte as ASCII or a dot for non-printables
+    auto toAscii = [](uint8_t byte) -> char
+    {
+        return (byte >= 32 && byte <= 126) ? (char)byte : '.';
+    };
+
+    // Save protocol-specific details
+    if (packet.ip_hdr.protocol == "TCP")
+    {
+        outFile << "Protocol: TCP" << '\n';
+
+        std::string asciiLine;
+        for (size_t i = 0; i < packet.tcp_hdr.data_payload.size(); ++i)
+        {
+            // Write byte in hex format
+            outFile << std::hex << std::setw(2) << std::setfill('0') << (int)packet.tcp_hdr.data_payload[i] << " ";
+
+            // Append ASCII representation
+            asciiLine += toAscii(packet.tcp_hdr.data_payload[i]);
+
+            // Every 16 bytes, write the ASCII representation
+            if ((i + 1) % 16 == 0 || i + 1 == packet.tcp_hdr.data_payload.size())
+            {
+                outFile << "  " << asciiLine << '\n';
+                asciiLine.clear(); // Reset ASCII line
+            }
+        }
+        outFile << '\n';
+    }
+    else if (packet.ip_hdr.protocol == "UDP")
+    {
+        outFile << "Protocol: UDP" << '\n';
+
+        std::string asciiLine;
+        for (size_t i = 0; i < packet.udp_hdr.data_payload.size(); ++i)
+        {
+            outFile << std::hex << std::setw(2) << std::setfill('0') << (int)packet.udp_hdr.data_payload[i] << " ";
+            asciiLine += toAscii(packet.udp_hdr.data_payload[i]);
+
+            if ((i + 1) % 16 == 0 || i + 1 == packet.udp_hdr.data_payload.size())
+            {
+                outFile << "  " << asciiLine << '\n';
+                asciiLine.clear();
+            }
+        }
+        outFile << '\n';
+    }
+    else if (packet.ip_hdr.protocol == "ICMP")
+    {
+        outFile << "Protocol: ICMP" << '\n';
+
+        std::string asciiLine;
+        for (size_t i = 0; i < packet.icmp_hdr.data_payload.size(); ++i)
+        {
+            outFile << std::hex << std::setw(2) << std::setfill('0') << (int)packet.icmp_hdr.data_payload[i] << " ";
+            asciiLine += toAscii(packet.icmp_hdr.data_payload[i]);
+
+            if ((i + 1) % 16 == 0 || i + 1 == packet.icmp_hdr.data_payload.size())
+            {
+                outFile << "  " << asciiLine << '\n';
+                asciiLine.clear();
+            }
+        }
+        outFile << '\n';
+    }
+    else
+    {
+        outFile << "Protocol: Unknown (" << packet.ip_hdr.protocol << ")" << '\n';
+    }
+
+    // Reset formatting and close the file
+    outFile << std::dec;
+    outFile.close();
+    showPopup("Packet saved to " + filename);
 }
+
 void packetRawWindow(const Packet &packet)
 {
     int screen_width = GetScreenWidth();
@@ -264,7 +464,7 @@ void packetRawWindow(const Packet &packet)
         ClearBackground(LIGHTGRAY);
 
         // Title
-        DrawText("Packet Details", 20 * scaleX, 20 * scaleY, 24 * scaleY, DARKGRAY);
+        DrawText("Packet Raw Data", 20 * scaleX, 20 * scaleY, 24 * scaleY, DARKGRAY);
 
         float yOffset = 60 * scaleY; // Vertical spacing offset
 
@@ -312,6 +512,14 @@ void packetRawWindow(const Packet &packet)
         {
             savePacketRaw(packet);
         }
+        if (IsKeyPressed(KEY_A))
+        {
+            savePacketRawASCII(packet);
+        }
+        if (IsKeyPressed(KEY_E))
+        {
+            savePacketRawHex(packet);
+        }
 
         // Handle resizing
         if (IsWindowResized())
@@ -323,99 +531,93 @@ void packetRawWindow(const Packet &packet)
         EndDrawing();
     }
 }
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <iomanip>
-using namespace std;
 
 void savePacketDetails(const Packet &packet)
 {
-    
     std::string filename = "packet_details_" + getTimeStamp() + ".txt";
     std::ofstream outFile(filename);
 
     if (!outFile.is_open())
     {
-        std::cerr << "Error opening file for writing!" << std::endl;
+        showPopup("ERROR: opening " + filename + " file for writing!");
         return;
     }
 
     // Save Ethernet Header
-    outFile << "Ethernet Source: " << packet.eth_hdr.source << std::endl;
-    outFile << "Ethernet Destination: " << packet.eth_hdr.destiny << std::endl;
-    outFile << "Ethernet Protocol: " << packet.eth_hdr.protocol << std::endl;
-    outFile << std::endl;
+    outFile << "Ethernet Source: " << packet.eth_hdr.source << '\n';
+    outFile << "Ethernet Destination: " << packet.eth_hdr.destiny << '\n';
+    outFile << "Ethernet Protocol: " << packet.eth_hdr.protocol << '\n';
+    outFile << '\n';
 
     // Save IP Header Data
-    outFile << "IP Header:" << std::endl;
-    outFile << "Version: " << packet.ip_hdr.version << std::endl;
-    outFile << "Header Length: " << packet.ip_hdr.header_length << std::endl;
-    outFile << "Total Length: " << packet.ip_hdr.total_length << std::endl;
-    outFile << "Checksum: " << packet.ip_hdr.checksum << std::endl;
-    outFile << "Protocol: " << packet.ip_hdr.protocol << std::endl;
-    outFile << "IP Header Data: " << std::endl;
+    outFile << "IP Header:" << '\n';
+    outFile << "Version: " << packet.ip_hdr.version << '\n';
+    outFile << "Header Length: " << packet.ip_hdr.header_length << '\n';
+    outFile << "Total Length: " << packet.ip_hdr.total_length << '\n';
+    outFile << "Checksum: " << packet.ip_hdr.checksum << '\n';
+    outFile << "Protocol: " << packet.ip_hdr.protocol << '\n';
+    outFile << "IP Header Data: " << '\n';
     outFile << "Data: ";
     for (auto byte : packet.ip_hdr.header_data)
     {
         outFile << std::hex << (int)byte << " ";
     }
-    outFile << std::endl
-            << std::endl;
+    outFile << '\n'
+            << '\n';
 
     // Save protocol-specific details
     if (packet.ip_hdr.protocol == "TCP")
     {
-        outFile << "TCP Header:" << std::endl;
-        outFile << "Source Port: " << packet.tcp_hdr.source_port << std::endl;
-        outFile << "Destination Port: " << packet.tcp_hdr.destination_port << std::endl;
-        outFile << "Sequence Number: " << packet.tcp_hdr.sequence_number << std::endl;
-        outFile << "Acknowledgement Number: " << packet.tcp_hdr.acknowledge_number << std::endl;
-        outFile << "Header Length: " << packet.tcp_hdr.header_length << std::endl;
-        outFile << "TCP Header Data: " << std::endl;
+        outFile << "TCP Header:" << '\n';
+        outFile << "Source Port: " << packet.tcp_hdr.source_port << '\n';
+        outFile << "Destination Port: " << packet.tcp_hdr.destination_port << '\n';
+        outFile << "Sequence Number: " << packet.tcp_hdr.sequence_number << '\n';
+        outFile << "Acknowledgement Number: " << packet.tcp_hdr.acknowledge_number << '\n';
+        outFile << "Header Length: " << packet.tcp_hdr.header_length << '\n';
+        outFile << "TCP Header Data: " << '\n';
         outFile << "Data: ";
         for (auto byte : packet.tcp_hdr.header_data)
         {
             outFile << std::hex << (int)byte << " ";
         }
-        outFile << std::endl
-                << std::endl;
+        outFile << '\n'
+                << '\n';
     }
     else if (packet.ip_hdr.protocol == "UDP")
     {
-        outFile << "UDP Header:" << std::endl;
-        outFile << "Source Port: " << packet.udp_hdr.source_port << std::endl;
-        outFile << "Destination Port: " << packet.udp_hdr.destination_port << std::endl;
-        outFile << "Length: " << packet.udp_hdr.length << std::endl;
-        outFile << "Checksum: " << packet.udp_hdr.checksum << std::endl;
-        outFile << "UDP Header Data: " << std::endl;
+        outFile << "UDP Header:" << '\n';
+        outFile << "Source Port: " << packet.udp_hdr.source_port << '\n';
+        outFile << "Destination Port: " << packet.udp_hdr.destination_port << '\n';
+        outFile << "Length: " << packet.udp_hdr.length << '\n';
+        outFile << "Checksum: " << packet.udp_hdr.checksum << '\n';
+        outFile << "UDP Header Data: " << '\n';
         outFile << "Data: ";
         for (auto byte : packet.udp_hdr.header_data)
         {
             outFile << std::hex << (int)byte << " ";
         }
-        outFile << std::endl
-                << std::endl;
+        outFile << '\n'
+                << '\n';
     }
     else if (packet.ip_hdr.protocol == "ICMP")
     {
-        outFile << "ICMP Header:" << std::endl;
-        outFile << "Type: " << packet.icmp_hdr.type << std::endl;
-        outFile << "Code: " << packet.icmp_hdr.code << std::endl;
-        outFile << "Checksum: " << packet.icmp_hdr.checksum << std::endl;
-        outFile << "ICMP Header Data: " << std::endl;
+        outFile << "ICMP Header:" << '\n';
+        outFile << "Type: " << packet.icmp_hdr.type << '\n';
+        outFile << "Code: " << packet.icmp_hdr.code << '\n';
+        outFile << "Checksum: " << packet.icmp_hdr.checksum << '\n';
+        outFile << "ICMP Header Data: " << '\n';
         outFile << "Data: ";
         for (auto byte : packet.icmp_hdr.header_data)
         {
             outFile << std::hex << (int)byte << " ";
         }
-        outFile << std::endl
-                << std::endl;
+        outFile << '\n'
+                << '\n';
     }
 
     // Close the file
     outFile.close();
-    std::cout << "Packet details saved to " << filename << std::endl;
+    showPopup("Packet details saved to " + filename);
 }
 
 void packetDetailsWindow(const Packet &packet)
@@ -435,13 +637,13 @@ void packetDetailsWindow(const Packet &packet)
         BeginDrawing();
         ClearBackground(LIGHTGRAY);
 
-        float yOffset= 20 *scaleY;
+        float yOffset = 20 * scaleY;
 
         // Title
         DrawText("Packet Details", 20 * scaleX, 20 * scaleY, 24 * scaleY, DARKGRAY);
-        yOffset += 20 *scaleY;
+        yOffset += 20 * scaleY;
 
-       // float yOffset = 60 * scaleY; // Vertical spacing offset
+        // float yOffset = 60 * scaleY; // Vertical spacing offset
 
         // Display Ethernet Header
         DrawText(TextFormat("Ethernet Source: %s", packet.eth_hdr.source.c_str()),
@@ -482,12 +684,10 @@ void packetDetailsWindow(const Packet &packet)
 
         DrawText("IP Header Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
-       
 
         DrawPacketData(packet.ip_hdr.header_data.data(), packet.ip_hdr.header_data.size(),
                        20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
-        yOffset += ((packet.ip_hdr.header_data.size() / 16 + 1) * 20 * scaleY) +40 * scaleY;
-        
+        yOffset += ((packet.ip_hdr.header_data.size() / 16 + 1) * 20 * scaleY) + 40 * scaleY;
 
         // Display protocol-specific details
         if (packet.ip_hdr.protocol == "TCP")
@@ -595,7 +795,6 @@ void packetDetailsWindow(const Packet &packet)
         EndDrawing();
     }
 }
-
 
 Packet processPacket(const u_char *packet_ptr, int link_hdr_length)
 {
@@ -739,7 +938,7 @@ void savePacketsCSV(const std::vector<Packet> &packets)
     std::ofstream file(filename);
     if (!file.is_open())
     {
-        std::cerr << "Failed to open file for writing: " << filename << std::endl;
+        showPopup("ERROR: opening " + filename + " file for writing!");
         return;
     }
 
@@ -757,8 +956,7 @@ void savePacketsCSV(const std::vector<Packet> &packets)
     }
 
     file.close();
-
-    std::cout << "Packet data saved to: " << filename << std::endl;
+    showPopup("Packets saved to " + filename);
 }
 
 void captureWindow(pcap_t *capture_device, std::string &capture_filter)
@@ -770,11 +968,11 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
         bpf_u_int32 netmask;
         if (pcap_compile(capture_device, &bpf, capture_filter.c_str(), 0, netmask) == PCAP_ERROR)
         {
-            showErrorPopup("ERROR: pcap_compile() -> " + std::string(pcap_geterr(capture_device)));
+            showPopup("ERROR: pcap_compile() -> " + std::string(pcap_geterr(capture_device)));
         }
         if (pcap_setfilter(capture_device, &bpf) == PCAP_ERROR)
         {
-            showErrorPopup("ERROR: pcap_setfilter() -> " + std::string(pcap_geterr(capture_device)));
+            showPopup("ERROR: pcap_setfilter() -> " + std::string(pcap_geterr(capture_device)));
         }
     }
 
@@ -828,6 +1026,12 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
                 if (selected_index < scroll_offset)
                     scroll_offset--;
             }
+            if (IsKeyDown(KEY_PAGE_UP))
+            {
+                int old_index = selected_index;
+                selected_index = std::max(0, selected_index - VISIBLE_ROWS);
+                scroll_offset = std::max(0, scroll_offset - (old_index - selected_index));
+            }
         }
         if (selected_index < static_cast<int>(packets.size()) - 1)
         {
@@ -836,6 +1040,13 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
                 selected_index++;
                 if (selected_index - scroll_offset >= ROW_HEIGHT)
                     scroll_offset++;
+            }
+            if (IsKeyDown(KEY_PAGE_DOWN))
+            {
+                int old_index = selected_index;
+                selected_index = std::min(static_cast<int>(packets.size()) - 1, selected_index + VISIBLE_ROWS);
+                scroll_offset = std::min(static_cast<int>(packets.size()) - VISIBLE_ROWS,
+                                         scroll_offset + (selected_index - old_index));
             }
         }
 
@@ -1124,11 +1335,11 @@ void deviceWindow(std::string &selected_device, std::string &capture_filter)
             {
                 DrawRectangle(scaleX * 10, devicesStartY + scaleY * (30 + i * 30), scaleX * 780, scaleY * 30, LIGHTGRAY);
             }
-            #if defined(_WIN32)
-                std::string device_name_description = devices[i].second;
-            #else 
-                std::string device_name_description = devices[i].first + " - " + devices[i].second;
-            #endif
+#if defined(_WIN32)
+            std::string device_name_description = devices[i].second;
+#else
+            std::string device_name_description = devices[i].first + " - " + devices[i].second;
+#endif
             DrawText(device_name_description.c_str(), scaleX * 20, devicesStartY + scaleY * (35 + i * 30), scaleY * 20, BLACK);
         }
 
@@ -1154,7 +1365,7 @@ int main()
     pcap_t *capture_device = pcap_open_live(selected_device.c_str(), BUFSIZ, 0, -1, error_buffer);
     if (capture_device == nullptr)
     {
-        showErrorPopup("ERROR: pcap_open_live() -> " + std::string(error_buffer)); // usually sudo problem
+        showPopup("ERROR: pcap_open_live() -> " + std::string(error_buffer)); // usually sudo problem
     }
 
     captureWindow(capture_device, capture_filter);

@@ -141,6 +141,7 @@ typedef struct tagBITMAPINFOHEADER {
         uint16_t seq;      // Sequence number
     };
 #else
+    #include <pcap/pcap.h>  // inet_ntoa
     #include <netinet/ip_icmp.h> // ICMP header
     #include <netinet/tcp.h>     // TCP header
     #include <netinet/udp.h>     // UDP header
