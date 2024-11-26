@@ -1,7 +1,8 @@
 # using GNU make:
 ifdef OS  #Windows
 	CC := g++.exe
-	FLAGS := -lwpcap -lws2_32 -lraylib
+	FLAGS := -lwpcap -lws2_32 -lraylib -Wl,--subsystem,windows
+#-mwindows
 	FixPath = $(subst /,\,$1)
 	UNAME := Windows
 	EXT := .exe

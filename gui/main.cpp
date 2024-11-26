@@ -1354,6 +1354,8 @@ int main()
 {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "pcapsule");
+    const Image icon = LoadImage("icon.png"); 
+    SetWindowIcon(icon);
     SetExitKey(KEY_NULL);
     std::string selected_device;
     std::string capture_filter;

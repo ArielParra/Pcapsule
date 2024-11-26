@@ -75,10 +75,10 @@ g++.exe main.cpp -lwpcap
 - Ayeni, O. et al. (2021). *Design and Implementation of a Packet Sniffing Library*. Recuperado de <https://infonomics-society.org/wp-content/uploads/Design-and-Implementation-of-a-Packet-Sniffing-Library.pdf>
 - Bao, C. (2022). *Write a Linux packet sniffer from scratch: part one- PF_PACKET socket and promiscuous mode*. Recuperado de <https://organicprogrammer.com/2022/02/22/how-to-implement-libpcap-on-linux-with-raw-socket-part1/>
 - Casado, M. (2005). *The Sniffer's Guide to Raw Traffic* Recuperado de <http://yuba.stanford.edu/~casado/pcap/section1.html>
-- npcap. (s.f.). *Npcap Development Tutorial*. Recuperado de <https://npcap.com/guide/npcap-tutorial.html>
+- Evan McLean .(2009).*how-do-i-add-an-icon-to-a-mingw-gcc-compiled-executable*. StackOverflow. Recuperado de <https://stackoverflow.com/questions/708238/how-do-i-add-an-icon-to-a-mingw-gcc-compiled-executable>
 - Martin, L. (2008). *hakin9*. Recuperado de <http://recursos.aldabaknocking.com/libpcapHakin9LuisMartinGarcia.pdf>
+- npcap. (s.f.). *Npcap Development Tutorial*. Recuperado de <https://npcap.com/guide/npcap-tutorial.html>
 - Silver Moon. (2020). *How to code a Packet Sniffer in C with Libpcap on Linux*. Recuperado de <https://www.binarytides.com/packet-sniffer-code-c-libpcap-linux-sockets/>
 - talalio. (2023). *Building a packet sniffer*. Recuperado de <https://talalio.medium.com/building-a-packet-sniffer-9460f394041>
 - tcpdump.org. (s.f.). *Programming with pcap*. Recuperado de <https://www.tcpdump.org/pcap.html>
 - Vic Hargrave. (2022). *Develop a Packet Sniffer with Libpcap*. Recuperado de <https://vichargrave.github.io/programming/develop-a-packet-sniffer-with-libpcap/>
-
