@@ -173,7 +173,7 @@ struct IP_Header {
 // TCP Header structure
 struct TCP_Header {
     int source_port;
-    int destination_port;
+    int destiny_port;
     int sequence_number;
     int acknowledge_number;
     int header_length;
@@ -193,7 +193,7 @@ struct TCP_Header {
 // UDP Header structure
 struct UDP_Header {
     int source_port;
-    int destination_port;
+    int destiny_port;
     int length;
     int checksum;
     std::vector<u_char> header_data;

@@ -1,8 +1,7 @@
 # using GNU make:
 ifdef OS  #Windows
 	CC := g++.exe
-	FLAGS := -lwpcap -lws2_32 -lraylib -mwindows
-# -icon.res 
+	FLAGS := -lwpcap -lws2_32 -lraylib -mwindows icon.res 
 	FixPath = $(subst /,\,$1)
 	InstallPath :=	C:\/Users\/$(USERNAME)\/AppData\/Local\/
 	IconoPath   := InstallPath

@@ -545,7 +545,7 @@ void savePacketDetails(const Packet &packet)
 
     // Save Ethernet Header
     outFile << "Ethernet Source: " << packet.eth_hdr.source << '\n';
-    outFile << "Ethernet Destination: " << packet.eth_hdr.destiny << '\n';
+    outFile << "Ethernet Destiny: " << packet.eth_hdr.destiny << '\n';
     outFile << "Ethernet Protocol: " << packet.eth_hdr.protocol << '\n';
     outFile << '\n';
 
@@ -570,7 +570,7 @@ void savePacketDetails(const Packet &packet)
     {
         outFile << "TCP Header:" << '\n';
         outFile << "Source Port: " << packet.tcp_hdr.source_port << '\n';
-        outFile << "Destination Port: " << packet.tcp_hdr.destination_port << '\n';
+        outFile << "Destiny Port: " << packet.tcp_hdr.destiny_port << '\n';
         outFile << "Sequence Number: " << packet.tcp_hdr.sequence_number << '\n';
         outFile << "Acknowledgement Number: " << packet.tcp_hdr.acknowledge_number << '\n';
         outFile << "Header Length: " << packet.tcp_hdr.header_length << '\n';
@@ -587,7 +587,7 @@ void savePacketDetails(const Packet &packet)
     {
         outFile << "UDP Header:" << '\n';
         outFile << "Source Port: " << packet.udp_hdr.source_port << '\n';
-        outFile << "Destination Port: " << packet.udp_hdr.destination_port << '\n';
+        outFile << "Destiny Port: " << packet.udp_hdr.destiny_port << '\n';
         outFile << "Length: " << packet.udp_hdr.length << '\n';
         outFile << "Checksum: " << packet.udp_hdr.checksum << '\n';
         outFile << "UDP Header Data: " << '\n';
@@ -650,7 +650,7 @@ void packetDetailsWindow(const Packet &packet)
                  20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
 
-        DrawText(TextFormat("Ethernet Destination: %s", packet.eth_hdr.destiny.c_str()),
+        DrawText(TextFormat("Ethernet Destiny: %s", packet.eth_hdr.destiny.c_str()),
                  20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
         yOffset += 20 * scaleY;
 
@@ -699,7 +699,7 @@ void packetDetailsWindow(const Packet &packet)
                      20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
-            DrawText(TextFormat("Destination Port: %i", packet.tcp_hdr.destination_port),
+            DrawText(TextFormat("Destiny Port: %i", packet.tcp_hdr.destiny_port),
                      20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
@@ -731,7 +731,7 @@ void packetDetailsWindow(const Packet &packet)
                      20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
-            DrawText(TextFormat("Destination Port: %i", packet.udp_hdr.destination_port),
+            DrawText(TextFormat("Destiny Port: %i", packet.udp_hdr.destiny_port),
                      20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
 
@@ -848,7 +848,7 @@ Packet processPacket(const u_char *packet_ptr, int link_hdr_length)
         // Parse TCP Header
         const tcphdr *tcp_hdr = reinterpret_cast<const tcphdr *>(current_ptr + packet_info.ip_hdr.header_length);
         packet_info.tcp_hdr.source_port = ntohs(tcp_hdr->th_sport);
-        packet_info.tcp_hdr.destination_port = ntohs(tcp_hdr->th_dport);
+        packet_info.tcp_hdr.destiny_port = ntohs(tcp_hdr->th_dport);
         packet_info.tcp_hdr.sequence_number = ntohl(tcp_hdr->th_seq);
         packet_info.tcp_hdr.acknowledge_number = ntohl(tcp_hdr->th_ack);
         packet_info.tcp_hdr.header_length = tcp_hdr->th_off * 4; // TCP header length in bytes
@@ -873,7 +873,7 @@ Packet processPacket(const u_char *packet_ptr, int link_hdr_length)
         packet_info.ip_hdr.protocol = "UDP";
         const udphdr *udp_hdr = reinterpret_cast<const udphdr *>(current_ptr + packet_info.ip_hdr.header_length);
         packet_info.udp_hdr.source_port = ntohs(udp_hdr->uh_sport);
-        packet_info.udp_hdr.destination_port = ntohs(udp_hdr->uh_dport);
+        packet_info.udp_hdr.destiny_port = ntohs(udp_hdr->uh_dport);
         packet_info.udp_hdr.length = ntohs(udp_hdr->uh_ulen);
 
         int header_size = sizeof(udphdr);
@@ -919,7 +919,7 @@ Packet processPacket(const u_char *packet_ptr, int link_hdr_length)
         break;
     }
     default:
-        packet_info.ip_hdr.protocol = "UNKNOWN";
+        packet_info.ip_hdr.protocol = "----";//UNKOWN
         break;
     }
     return packet_info;
@@ -974,6 +974,7 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
         {
             showPopup("ERROR: pcap_setfilter() -> " + std::string(pcap_geterr(capture_device)));
         }
+        showPopup("Capturing with filter: " + capture_filter);
     }
 
     // Packet-related variables
@@ -1029,7 +1030,7 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
             if (IsKeyDown(KEY_PAGE_UP))
             {
                 int old_index = selected_index;
-                selected_index = std::max(0, selected_index - VISIBLE_ROWS);
+                selected_index = 0;
                 scroll_offset = std::max(0, scroll_offset - (old_index - selected_index));
             }
         }
@@ -1044,7 +1045,7 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
             if (IsKeyDown(KEY_PAGE_DOWN))
             {
                 int old_index = selected_index;
-                selected_index = std::min(static_cast<int>(packets.size()) - 1, selected_index + VISIBLE_ROWS);
+                selected_index = static_cast<int>(packets.size()) - 1;
                 scroll_offset = std::min(static_cast<int>(packets.size()) - VISIBLE_ROWS,
                                          scroll_offset + (selected_index - old_index));
             }
@@ -1052,9 +1053,17 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
 
         if (IsKeyPressed(KEY_P))
             is_paused = !is_paused;
-
-        if (IsKeyPressed(KEY_C))
+        if (IsKeyPressed(KEY_M)){
             packets.clear();
+            capture_filter.clear();
+            pcap_close(capture_device);
+            break;
+        }
+        if (IsKeyPressed(KEY_C)){
+            selected_index = 0;
+            scroll_offset = 0;
+            packets.clear();
+        }
         if (IsKeyPressed(KEY_S) && !packets.empty())
             savePacketsCSV(packets); // TODO
 
@@ -1133,17 +1142,17 @@ void filterWindow(std::string &capture_filter)
     // Filter text boxes and states
     Rectangle textBoxes[5] = {
         {10, 80, 780, 40},  // IP Source
-        {10, 140, 780, 40}, // IP Destination
-        {10, 200, 780, 40}, // TCP Source Port
-        {10, 260, 780, 40}, // TCP Destination Port
-        {10, 320, 780, 40}  // Host
+        {10, 140, 780, 40}, // IP Destiny
+        {10, 240, 780, 40}, // Protocol Source Port 
+        {10, 300, 780, 40}, // Protocol Destiny Port
+        {10, 360, 780, 40}  // Host
     };
 
-    const std::vector<std::string> labels = {"IP Source:", "IP Destination:", "TCP Src Port:", "TCP Dst Port:", "Host:"};
+    std::vector<std::string> labels = {"IP Source:", "IP Destiny:", "TCP Source Port:", "TCP Destiny Port:", "Host:"};
     const int inputs_size = 5;
     std::vector<std::string> input_buffers(inputs_size, ""); // Initialize input buffers
     std::vector<bool> mouseOnText(inputs_size, false);
-
+    std::string protocol = "tcp";
     bool showWindow = true;
 
     while (showWindow && !WindowShouldClose())
@@ -1153,6 +1162,22 @@ void filterWindow(std::string &capture_filter)
 
         float scaleX = screen_width / baseWidth;
         float scaleY = screen_height / baseHeight;
+
+        Rectangle tcpButton = {280 * scaleX, 200 * scaleY, 80 * scaleX, 30 * scaleY};
+        if (CustomButton(tcpButton, "tcp", LIGHTGRAY, DARKGRAY, BLACK))
+        {
+            labels[2] = "TCP Source Port:";
+            labels[3] = "TCP Destiny Port:";
+            protocol = "tcp";
+        }
+
+        Rectangle udpButton = {400 * scaleX, 200 * scaleY, 80 * scaleX, 30 * scaleY}; // Shifted horizontally
+        if (CustomButton(udpButton, "udp", LIGHTGRAY, DARKGRAY, BLACK))
+        {
+            labels[2] = "UDP Source Port:";
+            labels[3] = "UDP Destiny Port:";
+            protocol = "udp";
+        }
 
         for (int i = 0; i < inputs_size; ++i)
         {
@@ -1194,7 +1219,7 @@ void filterWindow(std::string &capture_filter)
         }
 
         // Apply button
-        Rectangle applyButton = {250 * scaleX, 400 * scaleY, 80 * scaleX, 30 * scaleY};
+        Rectangle applyButton = {280 * scaleX, 460 * scaleY, 80 * scaleX, 30 * scaleY};
 
         if (CustomButton(applyButton, "Apply", LIGHTGRAY, DARKGRAY, BLACK))
         {
@@ -1202,24 +1227,24 @@ void filterWindow(std::string &capture_filter)
             // Construct the filter string
             capture_filter.clear();
             if (!input_buffers[0].empty())
-                capture_filter += "ip.src == " + input_buffers[0];
+                capture_filter += "ip src " + input_buffers[0];
             if (!input_buffers[1].empty())
             {
                 if (!capture_filter.empty())
                     capture_filter += " and ";
-                capture_filter += "ip.dst == " + input_buffers[1];
+                capture_filter += "ip dst " + input_buffers[1];
             }
             if (!input_buffers[2].empty())
             {
                 if (!capture_filter.empty())
                     capture_filter += " and ";
-                capture_filter += "tcp.srcport == " + input_buffers[2];
+                capture_filter += protocol +" src port " + input_buffers[2];
             }
             if (!input_buffers[3].empty())
             {
                 if (!capture_filter.empty())
                     capture_filter += " and ";
-                capture_filter += "tcp.dstport == " + input_buffers[3];
+                capture_filter += protocol + " dst port " + input_buffers[3];
             }
             if (!input_buffers[4].empty())
             {
@@ -1231,15 +1256,13 @@ void filterWindow(std::string &capture_filter)
         }
 
         // Cancel button
-        Rectangle cancelButton = {370 * scaleX, 400 * scaleY, 80 * scaleX, 30 * scaleY};
+        Rectangle cancelButton = {400 * scaleX, 460 * scaleY, 80 * scaleX, 30 * scaleY};
         if (CustomButton(cancelButton, "Cancel", LIGHTGRAY, DARKGRAY, BLACK))
         {
-
             screen_width = GetScreenWidth();
             screen_height = GetScreenHeight();
             showWindow = false; // Close the filter window
         }
-
         // Handle window resizing
         if (IsWindowResized())
         {
@@ -1279,7 +1302,16 @@ void deviceWindow(std::string &selected_device, std::string &capture_filter)
         if (IsKeyPressed(KEY_ENTER) && !devices.empty())
         {
             selected_device = devices[selected_index].first;
-            break;
+            // Try to open capture device
+            char error_buffer[PCAP_ERRBUF_SIZE];
+            pcap_t *capture_device = pcap_open_live(selected_device.c_str(), BUFSIZ, 0, -1, error_buffer);
+            if (capture_device == nullptr)
+            {
+                showPopup("ERROR: pcap_open_live() -> " + std::string(error_buffer)); // usually sudo problem
+            }
+
+            captureWindow(capture_device, capture_filter);
+
         }
         BeginDrawing();
         ClearBackground(RAYWHITE);
@@ -1336,11 +1368,11 @@ void deviceWindow(std::string &selected_device, std::string &capture_filter)
                 DrawRectangle(scaleX * 10, devicesStartY + scaleY * (30 + i * 30), scaleX * 780, scaleY * 30, LIGHTGRAY);
             }
 #if defined(_WIN32)
-            std::string device_name_description = devices[i].second;
+            std::string device = devices[i].second; // Windows
 #else
-            std::string device_name_description = devices[i].first + " - " + devices[i].second;
+            std::string device = devices[i].first; // Linux
 #endif
-            DrawText(device_name_description.c_str(), scaleX * 20, devicesStartY + scaleY * (35 + i * 30), scaleY * 20, BLACK);
+            DrawText(device.c_str(), scaleX * 20, devicesStartY + scaleY * (35 + i * 30), scaleY * 20, BLACK);
         }
 
         screen_width = GetScreenWidth();
@@ -1362,17 +1394,7 @@ int main()
 
     deviceWindow(selected_device, capture_filter);
 
-    // Try to open capture device
-    char error_buffer[PCAP_ERRBUF_SIZE];
-    pcap_t *capture_device = pcap_open_live(selected_device.c_str(), BUFSIZ, 0, -1, error_buffer);
-    if (capture_device == nullptr)
-    {
-        showPopup("ERROR: pcap_open_live() -> " + std::string(error_buffer)); // usually sudo problem
-    }
-
-    captureWindow(capture_device, capture_filter);
-
+    
     CloseWindow();
-    pcap_close(capture_device);
     return 0;
 }
