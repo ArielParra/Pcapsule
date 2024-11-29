@@ -4,7 +4,7 @@ ifdef OS  #Windows
 	FLAGS := -lwpcap -lws2_32 -lraylib -mwindows icon.res 
 	FixPath = $(subst /,\,$1)
 	InstallPath :=	C:\/Users\/$(USERNAME)\/AppData\/Local\/
-	IconoPath   := InstallPath
+	IconPath   := InstallPath
 	DesktopPath := C:\/Users\/$(USERNAME)\/Desktop\/
 	UNAME := Windows
 	EXT := .exe
@@ -13,8 +13,10 @@ else  	  #*NIX
 	FLAGS := -lpcap -lraylib
 	RM := rm -f 
 	FixPath = $1
-	InstallPath := /usr/local/bin/
-	IconoPath   := /usr/local/share/icons/
+#InstallPath := /usr/local/bin/
+	InstallPath := /home/$(USER)/.local/bin/
+#IconPath   := /usr/local/share/icons/
+	IconPath   := /home/$(USER)/.local/share/icons/
 	DesktopPath := /home/$(USER)/Desktop
 	UNAME = $(shell uname)
 	EXT :=
@@ -33,16 +35,18 @@ $(Name)$(EXT): $(SRC)
 	$(CC) $(CFLAGS) -o $(call FixPath,$(Name)$(EXT)) $< $(FLAGS)
 
 install: $(Name)
+	mkdir -p "$(call FixPath,$(InstallPath))"
 	cp $(call FixPath,$(Name)$(EXT)) "$(call FixPath,$(InstallPath))"
 ifeq ($(UNAME), Linux)
-	cp $(ICON) $(IconoPath)
+	mkdir -p $(IconPath)
+	cp $(ICON) $(IconPath)
 endif
 
 uninstall:
 	rm -f  "$(call FixPath,$(InstallPath))$(Name)$(EXT)"
 ifeq ($(UNAME), Linux)
 	rm -f $(InstallPath)$(Name)$(EXT)
-	rm -f $(IconoPath)$(ICON)
+	rm -f $(IconPath)$(ICON)
 endif
 
 desktop: $(Name)
@@ -50,9 +54,9 @@ ifeq ($(UNAME), Linux)
 	@echo "[Desktop Entry]" > $(DesktopFile)
 	@echo "Version=1.0" >> $(DesktopFile)
 	@echo "Name=$(Name)" >> $(DesktopFile)
-	@echo "Comment=Solucionador de Klotski" >> $(DesktopFile)
-	@echo "Exec=$(InstallPath)$(Name)" >> $(DesktopFile)
-	@echo "Icon=$(IconoPath)$(ICON)" >> $(DesktopFile)
+	@echo "Comment=Network Traffic Analyzer" >> $(DesktopFile)
+	@echo "Exec=pkexec env DISPLAY=$$DISPLAY XAUTHORITY=$$XAUTHORITY XDG_RUNTIME_DIR=$$XDG_RUNTIME_DIR $(InstallPath)$(Name)" >> $(DesktopFile)
+	@echo "Icon=$(IconPath)$(ICON)" >> $(DesktopFile)
 	@echo "Type=Application" >> $(DesktopFile)
 	@echo "Categories=Network;System;Utility;" >> $(DesktopFile)
 	@chmod +x $(DesktopFile)
@@ -62,7 +66,7 @@ else ifeq ($(UNAME), Windows)
 		$ws = New-Object -ComObject WScript.Shell; \
 		$shortcut = $ws.CreateShortcut('$(call FixPath,$(DesktopPath))\\$(Name).lnk'); \
 		$shortcut.TargetPath = '$(call FixPath,$(InstallPath))$(Name)$(EXT)'; \
-		$shortcut.IconLocation = '$(call FixPath,$(IconoPath))'; \
+		$shortcut.IconLocation = '$(call FixPath,$(IconPath))'; \
 		$shortcut.WorkingDirectory = '$(call FixPath,$(InstallPath))'; \
 		$shortcut.Save(); \
 	"
@@ -72,7 +76,6 @@ endif
 clean:
 	rm -f  $(call FixPath,$(Name)$(EXT))
 ifeq ($(UNAME), Linux)
-	rm -f  $(InstallPath)$(Name)$(EXT)
 	rm -f  $(DesktopPath)$(DesktopFile)
 endif
 
