@@ -10,6 +10,7 @@
 
 #define TITLE_FONT_SIZE 24
 #define BODY_FONT_SIZE 20
+#define SMALL_FONT_SIZE 16
 
 bool CustomButton(Rectangle box, const char *text, Color buttonColor, Color hoverColor, Color textColor)
 {
@@ -126,7 +127,7 @@ void showPopup(const std::string &message)
         {
             break;
         }
-        
+
         if (IsWindowResized())
         {
             screen_width = GetScreenWidth();
@@ -183,7 +184,10 @@ void HandleTextInput(std::string &input, const int max_length)
         }
     }
 }
-
+char toAscii(uint8_t byte)
+{
+    return (byte >= 32 && byte <= 126) ? (char)byte : '.';
+}
 void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX, float scaleY, Color color)
 {
     const int lineLength = 16;
@@ -207,7 +211,7 @@ void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX
         hexOffset += 3;
 
         // Add ASCII or dot representation to asciiLine
-        asciiLine[asciiOffset] = (data[i] >= 32 && data[i] <= 128) ? (char)data[i] : '.';
+        asciiLine[asciiOffset] = toAscii(data[i]);
         asciiOffset++;
 
         if ((i + 1) % lineLength == 0 || i == size - 1)
@@ -252,12 +256,6 @@ void savePacketRawASCII(const Packet &packet)
         return;
     }
 
-    // Lambda to format a byte as ASCII or a dot for non-printables
-    auto toAscii = [](uint8_t byte) -> char
-    {
-        return (byte >= 32 && byte <= 126) ? (char)byte : '.';
-    };
-
     // Save protocol-specific details
     if (packet.ip_hdr.protocol == "TCP")
     {
@@ -265,8 +263,6 @@ void savePacketRawASCII(const Packet &packet)
         for (size_t i = 0; i < packet.tcp_hdr.data_payload.size(); ++i)
         {
             outFile << toAscii(packet.tcp_hdr.data_payload[i]);
-            if ((i + 1) % 16 == 0) // Line break after 16 bytes
-                outFile << std::endl;
         }
         outFile << std::endl;
     }
@@ -276,8 +272,6 @@ void savePacketRawASCII(const Packet &packet)
         for (size_t i = 0; i < packet.udp_hdr.data_payload.size(); ++i)
         {
             outFile << toAscii(packet.udp_hdr.data_payload[i]);
-            if ((i + 1) % 16 == 0)
-                outFile << std::endl;
         }
         outFile << std::endl;
     }
@@ -287,8 +281,6 @@ void savePacketRawASCII(const Packet &packet)
         for (size_t i = 0; i < packet.icmp_hdr.data_payload.size(); ++i)
         {
             outFile << toAscii(packet.icmp_hdr.data_payload[i]);
-            if ((i + 1) % 16 == 0)
-                outFile << std::endl;
         }
         outFile << std::endl;
     }
@@ -320,8 +312,6 @@ void savePacketRawHex(const Packet &packet)
         for (size_t i = 0; i < packet.tcp_hdr.data_payload.size(); ++i)
         {
             outFile << std::hex << std::setw(2) << std::setfill('0') << (int)packet.tcp_hdr.data_payload[i] << " ";
-            if ((i + 1) % 16 == 0) // Line break after 16 bytes
-                outFile << std::endl;
         }
         outFile << std::endl;
     }
@@ -331,8 +321,6 @@ void savePacketRawHex(const Packet &packet)
         for (size_t i = 0; i < packet.udp_hdr.data_payload.size(); ++i)
         {
             outFile << std::hex << std::setw(2) << std::setfill('0') << (int)packet.udp_hdr.data_payload[i] << " ";
-            if ((i + 1) % 16 == 0)
-                outFile << std::endl;
         }
         outFile << std::endl;
     }
@@ -342,8 +330,6 @@ void savePacketRawHex(const Packet &packet)
         for (size_t i = 0; i < packet.icmp_hdr.data_payload.size(); ++i)
         {
             outFile << std::hex << std::setw(2) << std::setfill('0') << (int)packet.icmp_hdr.data_payload[i] << " ";
-            if ((i + 1) % 16 == 0)
-                outFile << std::endl;
         }
         outFile << std::endl;
     }
@@ -369,12 +355,6 @@ void savePacketRaw(const Packet &packet)
         showPopup("ERROR: opening " + filename + " file for writing!");
         return;
     }
-
-    // Lambda to format a byte as ASCII or a dot for non-printables
-    auto toAscii = [](uint8_t byte) -> char
-    {
-        return (byte >= 32 && byte <= 126) ? (char)byte : '.';
-    };
 
     // Save protocol-specific details
     if (packet.ip_hdr.protocol == "TCP")
@@ -919,7 +899,7 @@ Packet processPacket(const u_char *packet_ptr, int link_hdr_length)
         break;
     }
     default:
-        packet_info.ip_hdr.protocol = "----";//UNKOWN
+        packet_info.ip_hdr.protocol = "----"; // UNKOWN
         break;
     }
     return packet_info;
@@ -995,8 +975,8 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
     // Base resolution for scaling
     const float baseWidth = 800.0f;
     const float baseHeight = 600.0f;
-    const int ROW_HEIGHT = 22;
-    const int VISIBLE_ROWS = 24;
+    const int ROW_HEIGHT = 18;
+    const int VISIBLE_ROWS = 19;
 
     int screen_width = GetScreenWidth();
     int screen_height = GetScreenHeight();
@@ -1053,13 +1033,15 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
 
         if (IsKeyPressed(KEY_P))
             is_paused = !is_paused;
-        if (IsKeyPressed(KEY_M)){
+        if (IsKeyPressed(KEY_M))
+        {
             packets.clear();
             capture_filter.clear();
             pcap_close(capture_device);
             break;
         }
-        if (IsKeyPressed(KEY_C)){
+        if (IsKeyPressed(KEY_C))
+        {
             selected_index = 0;
             scroll_offset = 0;
             packets.clear();
@@ -1123,6 +1105,104 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
             DrawRectangle(790 * scaleX, (40 * scaleY) + scrollbar_pos, 10 * scaleX, scrollbar_height, DARKGRAY);
         }
 
+        // Left section
+        int left_section_width = 400 * scaleX;
+        int left_section_height = 170 * scaleY; // Same height for both sections
+        int left_section_x = 10 * scaleX;       // Left margin
+        int left_section_y = (screen_height - left_section_height - 10 * scaleY);
+
+        DrawRectangle(left_section_x, left_section_y, left_section_width, left_section_height, LIGHTGRAY);
+        DrawRectangleLines(left_section_x, left_section_y, left_section_width, left_section_height, DARKGRAY);
+        DrawText("Packet Details", left_section_x + 10 * scaleX, left_section_y + 10 * scaleY, BODY_FONT_SIZE * scaleY, BLACK);
+
+        if (selected_index >= 0 && selected_index < (int)packets.size())
+        {
+            const auto &packet = packets[selected_index];
+
+            float yOffset = left_section_y + 50 * scaleY; // Start position below title
+
+            // Display Ethernet Header
+            DrawText(TextFormat("Ethernet Source: %s", packet.eth_hdr.source.c_str()),
+                     left_section_x + 10 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
+            yOffset += 20 * scaleY;
+
+            DrawText(TextFormat("Ethernet Destiny: %s", packet.eth_hdr.destiny.c_str()),
+                     left_section_x + 10 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
+            yOffset += 20 * scaleY;
+
+            DrawText(TextFormat("Ethernet Protocol: %i", packet.eth_hdr.protocol),
+                     left_section_x + 10 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
+            yOffset += 40 * scaleY;
+
+            DrawText(TextFormat("Ip Version: %i", packet.ip_hdr.version),
+                     left_section_x + 10 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
+            yOffset += 20 * scaleY;
+        }
+
+        // Right section
+        int right_section_width = left_section_width;                              // Match left section width
+        int right_section_height = left_section_height;                            // Match left section height
+        int right_section_x = screen_width - right_section_width - left_section_x; // Symmetric placement
+        int right_section_y = left_section_y;                                      // Align with the left section's Y position
+
+        DrawRectangle(right_section_x, right_section_y, right_section_width, right_section_height, LIGHTGRAY);
+        DrawRectangleLines(right_section_x, right_section_y, right_section_width, right_section_height, DARKGRAY);
+        DrawText("Raw Data", right_section_x + 10 * scaleX, right_section_y + 10 * scaleY, BODY_FONT_SIZE * scaleY, BLACK);
+
+        // Render ASCII and hex data in the right section
+       // Render ASCII data in the right section
+if (selected_index >= 0 && selected_index < (int)packets.size())
+{
+    const auto &packet = packets[selected_index];
+    const std::vector<uint8_t> &data = (packet.ip_hdr.protocol == "TCP")
+                                           ? packet.tcp_hdr.data_payload
+                                       : (packet.ip_hdr.protocol == "UDP")
+                                           ? packet.udp_hdr.data_payload
+                                       : (packet.ip_hdr.protocol == "ICMP")
+                                           ? packet.icmp_hdr.data_payload
+                                           : std::vector<uint8_t>();
+
+    if (!data.empty())
+    {
+        // Dimensions and starting point for text rendering
+        float xStart = right_section_x + 10 * scaleX; // Padding from rectangle edge
+        float yStart = right_section_y + 30 * scaleY; // Padding below "Raw Data" title
+        float charWidth = MeasureText("A", BODY_FONT_SIZE * scaleY); // Approximate width of a single character
+        int lineLength = (right_section_width - 20 * scaleX) / charWidth; // Max chars per line
+        float lineSpacing = BODY_FONT_SIZE * scaleY + 2; // Line spacing
+
+        std::string asciiLine; // Buffer for one line of ASCII characters
+        int asciiOffset = 0;            // Offset within the line
+        float y = yStart;               // Current Y position for drawing text
+
+        for (size_t i = 0; i < data.size(); ++i)
+        {
+            asciiLine[asciiOffset] = toAscii(data[i]);
+            asciiOffset++;
+
+            // When the line is full or it's the last byte, render the line
+            if (asciiOffset == lineLength  || i == data.size() - 1)
+            {
+                asciiLine[asciiOffset] = '\0'; // Null-terminate the string
+                DrawText(asciiLine.c_str(), xStart, y, BODY_FONT_SIZE * scaleY, BLACK);
+                asciiOffset = 0; // Reset line buffer
+                y += lineSpacing; // Move to the next line
+
+                // Stop rendering if we've exceeded the rectangle height
+                if (y + lineSpacing > right_section_y + right_section_height)
+                {
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        // No data available
+        DrawText("No data available", right_section_x + 10 * scaleX, right_section_y + 30 * scaleY, BODY_FONT_SIZE * scaleY, DARKGRAY);
+    }
+}
+
         screen_width = GetScreenWidth();
         screen_height = GetScreenHeight();
 
@@ -1143,7 +1223,7 @@ void filterWindow(std::string &capture_filter)
     Rectangle textBoxes[5] = {
         {10, 80, 780, 40},  // IP Source
         {10, 140, 780, 40}, // IP Destiny
-        {10, 240, 780, 40}, // Protocol Source Port 
+        {10, 240, 780, 40}, // Protocol Source Port
         {10, 300, 780, 40}, // Protocol Destiny Port
         {10, 360, 780, 40}  // Host
     };
@@ -1238,7 +1318,7 @@ void filterWindow(std::string &capture_filter)
             {
                 if (!capture_filter.empty())
                     capture_filter += " and ";
-                capture_filter += protocol +" src port " + input_buffers[2];
+                capture_filter += protocol + " src port " + input_buffers[2];
             }
             if (!input_buffers[3].empty())
             {
@@ -1311,7 +1391,6 @@ void deviceWindow(std::string &selected_device, std::string &capture_filter)
             }
 
             captureWindow(capture_device, capture_filter);
-
         }
         BeginDrawing();
         ClearBackground(RAYWHITE);
@@ -1386,7 +1465,7 @@ int main()
 {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "pcapsule");
-    const Image icon = LoadImage("icon.png"); 
+    const Image icon = LoadImage("icon.png");
     SetWindowIcon(icon);
     SetExitKey(KEY_NULL);
     std::string selected_device;
@@ -1394,7 +1473,6 @@ int main()
 
     deviceWindow(selected_device, capture_filter);
 
-    
     CloseWindow();
     return 0;
 }
