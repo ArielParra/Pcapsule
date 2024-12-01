@@ -190,41 +190,57 @@ char toAscii(uint8_t byte)
 }
 void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX, float scaleY, Color color)
 {
-    const int lineLength = 16;
-    char hexLine[48 + 1];
-    char asciiLine[lineLength + 1];
-    int hexOffset = 0;
-    int asciiOffset = 0;
+    const int lineLength = 16; 
+    char hexLine[48 + 1];      
+    char asciiLine[lineLength + 1]; 
+    int hexOffset = 0;        
+    int asciiOffset = 0;       
 
-    // Font size and spacing
-    int fontSize = BODY_FONT_SIZE * scaleY;
+     // Font size and spacing.
+    int fontSize = BODY_FONT_SIZE  * scaleY;
     int lineSpacing = 20 * scaleY;
 
     // Calculate dynamic positions
-    float hexX = x * scaleX;
-    int hexBlockWidth = MeasureText("XX ", fontSize) * lineLength;
-    float asciiX = hexX + hexBlockWidth + (10 * scaleX);
+    float hexX = x; 
+    int hexBlockWidth = lineLength * MeasureText("XX ", fontSize-2); 
+    float asciiX = hexX + hexBlockWidth + (10 * scaleX); 
+
+    
+    const int charWidth = MeasureText("00 ", fontSize);  
+    const int asciiCharWidth = MeasureText(" ", fontSize); 
 
     for (int i = 0; i < size; ++i)
-    { // Add hexadecimal representation to hexLine
+    {
+        // Add hexadecimal representation to hexLine
         snprintf(&hexLine[hexOffset], 4, "%02X ", data[i]);
         hexOffset += 3;
 
-        // Add ASCII or dot representation to asciiLine
-        asciiLine[asciiOffset] = toAscii(data[i]);
+        
+        if (data[i] >= 32 && data[i] <= 126)
+        {
+            asciiLine[asciiOffset] = data[i]; 
+        }
+        else
+        {
+            asciiLine[asciiOffset] = '.'; 
+            asciiOffset++;  
+            asciiLine[asciiOffset] = ' '; 
+        }
         asciiOffset++;
 
+       
         if ((i + 1) % lineLength == 0 || i == size - 1)
         {
-            // Null-terminate the lines
+           
             hexLine[hexOffset] = '\0';
             asciiLine[asciiOffset] = '\0';
 
-            /// Draw hex part
+            
             DrawText(hexLine, hexX, y, fontSize, color);
 
-            // Draw ASCII part aligned with hex
-            DrawText(asciiLine, asciiX, y, fontSize, color);
+            
+            float asciiWidth = asciiX + (lineLength * asciiCharWidth); 
+            DrawText(asciiLine, asciiWidth, y, fontSize, color);
 
             // Move to next line
             y += lineSpacing;
@@ -235,6 +251,7 @@ void DrawPacketData(const u_char *data, int size, float x, float y, float scaleX
         }
     }
 }
+
 std::string getTimeStamp()
 {
     time_t now = std::time(nullptr);
@@ -426,6 +443,7 @@ void savePacketRaw(const Packet &packet)
     showPopup("Packet saved to " + filename);
 }
 
+
 void packetRawWindow(const Packet &packet)
 {
     int screen_width = GetScreenWidth();
@@ -435,10 +453,15 @@ void packetRawWindow(const Packet &packet)
     const float baseWidth = 800.0f;
     const float baseHeight = 600.0f;
 
+     int bytesPerLine = 16; // Número de bytes por línea
+    char line[3]; 
+    
+
     while (!WindowShouldClose())
     {
         float scaleX = screen_width / baseWidth;
         float scaleY = screen_height / baseHeight;
+    
 
         BeginDrawing();
         ClearBackground(LIGHTGRAY);
