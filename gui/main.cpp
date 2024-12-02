@@ -1185,46 +1185,48 @@ if (selected_index >= 0 && selected_index < (int)packets.size())
                                            ? packet.icmp_hdr.data_payload
                                            : std::vector<uint8_t>();
 
-    if (!data.empty())
-    {
-        // Dimensions and starting point for text rendering
-        float xStart = right_section_x + 10 * scaleX; // Padding from rectangle edge
-        float yStart = right_section_y + 30 * scaleY; // Padding below "Raw Data" title
-        float charWidth = MeasureText("A", BODY_FONT_SIZE * scaleY); // Approximate width of a single character
-        int lineLength = (right_section_width - 20 * scaleX) / charWidth; // Max chars per line
-        float lineSpacing = BODY_FONT_SIZE * scaleY + 2; // Line spacing
+   if (!data.empty()) {
+    
+    float xStart = right_section_x + 10 * scaleX; 
+    float yStart = right_section_y + 30 * scaleY; 
+    float charWidth = MeasureText("A", BODY_FONT_SIZE * scaleY); 
+    int lineLength = (right_section_width - 20 * scaleX) / 15; 
+    float lineSpacing = BODY_FONT_SIZE * scaleY + 2; 
+    std::string asciiLine; 
+    asciiLine.reserve(lineLength * 2);  
+    int asciiOffset = 0; 
+    float y = yStart;    
 
-        std::string asciiLine; // Buffer for one line of ASCII characters
-        int asciiOffset = 0;            // Offset within the line
-        float y = yStart;               // Current Y position for drawing text
+    for (size_t i = 0; i < data.size(); ++i) {
+        char asciiChar = toAscii(data[i]);
+        asciiLine.push_back(asciiChar);  
+        
+        if (asciiChar == '.') {
+            asciiLine.push_back(' '); 
+        }
 
-        for (size_t i = 0; i < data.size(); ++i)
-        {
-            asciiLine[asciiOffset] = toAscii(data[i]);
-            asciiOffset++;
+        asciiOffset++;
 
-            // When the line is full or it's the last byte, render the line
-            if (asciiOffset == lineLength  || i == data.size() - 1)
-            {
-                asciiLine[asciiOffset] = '\0'; // Null-terminate the string
-                DrawText(asciiLine.c_str(), xStart, y, BODY_FONT_SIZE * scaleY, BLACK);
-                asciiOffset = 0; // Reset line buffer
-                y += lineSpacing; // Move to the next line
+        // When the line is full or it's the last byte, render the line
+        if (asciiOffset == lineLength || i == data.size() - 1) {
+            asciiLine.push_back('\0'); // Null-terminate the string
+            DrawText(asciiLine.c_str(), xStart, y, BODY_FONT_SIZE * scaleY, BLACK);
+            asciiOffset = 0; // Reset line buffer
+            asciiLine.clear(); // Limpiar la línea para el siguiente conjunto de caracteres
+            y += lineSpacing; // Move to the next line
 
-                // Stop rendering if we've exceeded the rectangle height
-                if (y + lineSpacing > right_section_y + right_section_height)
-                {
-                    break;
-                }
+            // Stop rendering if we've exceeded the rectangle height
+            if (y + lineSpacing > right_section_y + right_section_height) {
+                break;
             }
         }
     }
-    else
-    {
-        // No data available
-        DrawText("No data available", right_section_x + 10 * scaleX, right_section_y + 30 * scaleY, BODY_FONT_SIZE * scaleY, DARKGRAY);
+    } else {
+         // No data available
+         DrawText("No data available", right_section_x + 10 * scaleX, right_section_y + 30 * scaleY, BODY_FONT_SIZE * scaleY, DARKGRAY);
+        }
     }
-}
+
 
         screen_width = GetScreenWidth();
         screen_height = GetScreenHeight();
