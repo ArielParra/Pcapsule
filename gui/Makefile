@@ -25,7 +25,7 @@ endif
 ICON := icon.ico
 CFLAGS = -w -std=c++17
 CFLAGS += -Ofast -funroll-loops -mavx2 # Optimizations
-Name := pcapsule-$(UNAME)
+Name := pcapsule
 DesktopFile := $(Name).desktop
 SRC := main.cpp
 
