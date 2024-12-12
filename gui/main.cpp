@@ -480,7 +480,7 @@ void packetRawWindow(const Packet &packet)
             DrawTextF("TCP Raw Payload Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
             DrawPacketData(packet.tcp_hdr.data_payload.data(), packet.tcp_hdr.data_payload.size(),
-                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
+                            scaleX-100, yOffset, scaleX-10, scaleY, DARKGRAY);
             yOffset += (packet.tcp_hdr.data_payload.size() / 16 + 1) * 20 * scaleY;
         }
         else if (packet.ip_hdr.protocol == "UDP")
@@ -489,7 +489,7 @@ void packetRawWindow(const Packet &packet)
             DrawTextF("UDP Raw Payload Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
             DrawPacketData(packet.udp_hdr.data_payload.data(), packet.udp_hdr.data_payload.size(),
-                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
+                            20 *scaleX, yOffset, scaleX-10, scaleY, DARKGRAY);
             yOffset += (packet.udp_hdr.data_payload.size() / 16 + 1) * 20 * scaleY;
         }
         else if (packet.ip_hdr.protocol == "ICMP")
@@ -498,7 +498,7 @@ void packetRawWindow(const Packet &packet)
             DrawTextF("ICMP Raw Payload Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
             DrawPacketData(packet.icmp_hdr.data_payload.data(), packet.icmp_hdr.data_payload.size(),
-                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
+                           20 * scaleX, yOffset, scaleX-10, scaleY, DARKGRAY);
             yOffset += (packet.icmp_hdr.data_payload.size() / 16 + 1) * 20 * scaleY;
         }
         else
@@ -691,7 +691,7 @@ void packetDetailsWindow(const Packet &packet)
         yOffset += 20 * scaleY;
 
         DrawPacketData(packet.ip_hdr.header_data.data(), packet.ip_hdr.header_data.size(),
-                       20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
+                       20 * scaleX, yOffset, scaleX-10, scaleY, DARKGRAY);
         yOffset += ((packet.ip_hdr.header_data.size() / 16 + 1) * 20 * scaleY) + 40 * scaleY;
 
         // Display protocol-specific details
@@ -724,7 +724,7 @@ void packetDetailsWindow(const Packet &packet)
             DrawTextF("TCP Header Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
             DrawPacketData(packet.tcp_hdr.header_data.data(), packet.tcp_hdr.header_data.size(),
-                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
+                           20 * scaleX, yOffset, scaleX-10, scaleY, DARKGRAY);
             yOffset += (packet.tcp_hdr.header_data.size() / 16 + 1) * 20 * scaleY;
         }
         else if (packet.ip_hdr.protocol == "UDP")
@@ -752,7 +752,7 @@ void packetDetailsWindow(const Packet &packet)
             DrawTextF("UDP Header Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
             DrawPacketData(packet.udp_hdr.header_data.data(), packet.udp_hdr.header_data.size(),
-                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
+                           20 * scaleX, yOffset, scaleX-10, scaleY, DARKGRAY);
             yOffset += (packet.udp_hdr.header_data.size() / 16 + 1) * 20 * scaleY;
         }
         else if (packet.ip_hdr.protocol == "ICMP")
@@ -776,7 +776,7 @@ void packetDetailsWindow(const Packet &packet)
             DrawTextF("ICMP Header Data:", 20 * scaleX, yOffset, BODY_FONT_SIZE * scaleY, BLACK);
             yOffset += 20 * scaleY;
             DrawPacketData(packet.icmp_hdr.header_data.data(), packet.icmp_hdr.header_data.size(),
-                           20 * scaleX, yOffset, scaleX, scaleY, DARKGRAY);
+                           20 * scaleX, yOffset, scaleX-10, scaleY, DARKGRAY);
             yOffset += (packet.icmp_hdr.header_data.size() / 16 + 1) * 20 * scaleY;
         }
 
@@ -1460,9 +1460,9 @@ void deviceWindow(std::string &selected_device, std::string &capture_filter)
         }
 
         // Show the current capture filter text inside the input box
-        DrawTextF(capture_filter.c_str(), (int)(scaledTextBox.x + 5), (int)(scaledTextBox.y + 8), scaleY * 20, BLACK);
-        Rectangle filter_window = {10 * scaleX, 130 * scaleY, 140 * scaleX, 30 * scaleY};
-
+        DrawTextF(capture_filter.c_str(), (int)(scaledTextBox.x + 5), (int)(scaledTextBox.y + 8), scaleY * 30, BLACK);
+        Rectangle filter_window = {300 * scaleX, 130 * scaleY, 140 * scaleX, 30 * scaleY};
+        
         if (CustomButton(filter_window, "Set Filters", LIGHTGRAY, DARKGRAY, BLACK))
         {
             filterWindow(capture_filter); // Call the filter window
@@ -1470,7 +1470,7 @@ void deviceWindow(std::string &selected_device, std::string &capture_filter)
         // Move down the devices section
         int devicesStartY = screen_height / 3;
         int xCenter1 = scaleX* 550/2;
-        // Display device selection
+        // Display device selection*/
        /*DrawTextF("Select a device/interface:", scaleX * 10, devicesStartY, scaleY * 20, RED);*/
         DrawTextF("Select a device/interface:", xCenter1, devicesStartY , scaleY * 30 ,RED);
 
