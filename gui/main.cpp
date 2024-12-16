@@ -1085,7 +1085,7 @@ void captureWindow(pcap_t *capture_device, std::string &capture_filter)
         ClearBackground(RAYWHITE);
 
         // Top menu with dynamic text
-        DrawTextF(TextFormat("P = %s | ARROWS = Select | C = clear | S = save | D = Details | R = Raw ",
+        DrawTextF(TextFormat("P = %s | ARROWS = Select | C = Clear | S = Save | D = Details | R = Raw ",
                             is_paused ? "Resume" : "Pause"),
                  10 * scaleX, 10 * scaleY, BODY_FONT_SIZE * scaleY, DARKGRAY);
 
@@ -1271,7 +1271,7 @@ void filterWindow(std::string &capture_filter)
         float scaleY = screen_height / baseHeight;
 
         Rectangle tcpButton = {280 * scaleX, 200 * scaleY, 80 * scaleX, 30 * scaleY};
-        if (CustomButton(tcpButton, "tcp", LIGHTGRAY, DARKGRAY, BLACK))
+        if (CustomButton(tcpButton, "TCP", LIGHTGRAY, DARKGRAY, BLACK))
         {
             labels[2] = "TCP Source Port:";
             labels[3] = "TCP Destiny Port:";
@@ -1279,7 +1279,7 @@ void filterWindow(std::string &capture_filter)
         }
 
         Rectangle udpButton = {400 * scaleX, 200 * scaleY, 80 * scaleX, 30 * scaleY}; // Shifted horizontally
-        if (CustomButton(udpButton, "udp", LIGHTGRAY, DARKGRAY, BLACK))
+        if (CustomButton(udpButton, "UDP", LIGHTGRAY, DARKGRAY, BLACK))
         {
             labels[2] = "UDP Source Port:";
             labels[3] = "UDP Destiny Port:";
