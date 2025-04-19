@@ -2,5 +2,7 @@
 a.out
 a.exe
 *.csv
-gui/*.csv
-gui/*.txt
+*.csv
+*.txt
+pcapsule
+pcapsule.exe
